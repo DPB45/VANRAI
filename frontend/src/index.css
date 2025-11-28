@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Custom styles for the range input thumb */
+.range-thumb-red::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #dc2626; /* red-600 */
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.range-thumb-red::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #dc2626; /* red-600 */
+  border-radius: 50%;
+  cursor: pointer;
+}
