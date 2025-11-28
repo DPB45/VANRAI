@@ -4,17 +4,17 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com', // Use specific Gmail host
-  port: 465,              // Use Secure SSL Port
-  secure: true,           // Must be true for Port 465
+  host: 'smtp.googlemail.com', // <-- Alternative Google Host
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // --- CRITICAL SETTINGS ---
-  family: 4,              // Force IPv4
-  connectionTimeout: 10000, // Fail faster if blocked
-  // ------------------------
+  family: 4, // Force IPv4
+  connectionTimeout: 20000, // Increase timeout to 20 seconds
+  logger: true,
+  debug: true,
 });
 
 const sendEmail = async ({ to, subject, text, html }) => {
@@ -27,7 +27,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
   };
 
   try {
-    console.log(`Attempting to send email to ${to} via Gmail (SSL/465)...`);
+    console.log(`Attempting to send email to ${to} via GoogleMail...`);
     const info = await transporter.sendMail(mailOptions);
     console.log('📬 Email sent successfully:', info.messageId);
     return true;
