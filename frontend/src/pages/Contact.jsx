@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import axios from 'axios'; // Import axios
+import axios from 'axios';
 import { PhoneIcon, EnvelopeIcon, MapPinIcon } from '@heroicons/react/24/solid';
 
-// Reusable Input component (Updated to handle state)
+// 1. Import your local map image
+// Make sure you have saved your image as 'contact-map.jpg' in the assets folder
+import MapImg from '../assets/contact-map.jpg';
+
 const Input = ({ id, label, type = 'text', placeholder, value, onChange, required = true }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-semibold text-gray-700 mb-1">
@@ -12,8 +15,8 @@ const Input = ({ id, label, type = 'text', placeholder, value, onChange, require
       type={type}
       id={id}
       name={id}
-      value={value} // Bind state
-      onChange={onChange} // Update state
+      value={value}
+      onChange={onChange}
       className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
       placeholder={placeholder}
       required={required}
@@ -21,7 +24,6 @@ const Input = ({ id, label, type = 'text', placeholder, value, onChange, require
   </div>
 );
 
-// Reusable Textarea component (Updated to handle state)
 const Textarea = ({ id, label, placeholder, value, onChange, required = true }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-semibold text-gray-700 mb-1">
@@ -31,8 +33,8 @@ const Textarea = ({ id, label, placeholder, value, onChange, required = true }) 
       id={id}
       name={id}
       rows="5"
-      value={value} // Bind state
-      onChange={onChange} // Update state
+      value={value}
+      onChange={onChange}
       className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
       placeholder={placeholder}
       required={required}
@@ -40,9 +42,7 @@ const Textarea = ({ id, label, placeholder, value, onChange, required = true }) 
   </div>
 );
 
-// Main Contact Page
 const Contact = () => {
-  // --- 1. Add State for Form Inputs ---
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -51,10 +51,8 @@ const Contact = () => {
     message: '',
   });
   const [loading, setLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' }); // For success/error messages
-  // ------------------------------------
+  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
 
-  // --- 2. Handle Input Changes ---
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -62,26 +60,23 @@ const Contact = () => {
       [name]: value,
     }));
   };
-  // -----------------------------
 
-  // --- 3. Update Form Submission ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setStatusMessage({ type: '', text: '' }); // Clear previous status
+    setStatusMessage({ type: '', text: '' });
 
     try {
       const config = { headers: { 'Content-Type': 'application/json' } };
 
-      // Send data to backend /api/messages endpoint
       const { data } = await axios.post(
-        '/api/messages',
+        '/api/messages', // Using relative path now
         formData,
         config
       );
 
       setStatusMessage({ type: 'success', text: data.message || 'Message sent successfully!' });
-      setFormData({ name: '', email: '', phone: '', subject: '', message: '' }); // Clear form
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
 
     } catch (error) {
       setStatusMessage({
@@ -93,7 +88,6 @@ const Contact = () => {
       setLoading(false);
     }
   };
-  // ---------------------------------
 
   return (
     <div className="bg-white py-16">
@@ -107,7 +101,6 @@ const Contact = () => {
               We'd love to hear from you. Please fill out the form below.
             </p>
 
-            {/* Status Message Display */}
             {statusMessage.text && (
               <div className={`mb-6 p-3 rounded-md text-center ${
                 statusMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -142,7 +135,7 @@ const Contact = () => {
               <div>
                 <button
                   type="submit"
-                  disabled={loading} // Disable button while sending
+                  disabled={loading}
                   className={`w-full bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {loading ? 'Sending...' : 'Send Message'}
@@ -151,29 +144,29 @@ const Contact = () => {
             </form>
           </div>
 
-          {/* --- RIGHT: Sidebar (No changes needed here) --- */}
+          {/* --- RIGHT: Sidebar --- */}
           <div className="md:col-span-1 space-y-8">
-            {/* Customer Care */}
             <div className="bg-gray-50 p-6 rounded-lg flex items-start">
               <PhoneIcon className="w-8 h-8 text-red-600 mr-4 flex-shrink-0" />
               <div>
                 <h3 className="text-xl font-semibold text-gray-800">Customer Care</h3>
-                <p className="text-gray-600 mt-1">+91 98765 43210</p>
+                <p className="text-gray-600 mt-1">+91 8767934391</p>
               </div>
             </div>
-            {/* Email Support */}
             <div className="bg-gray-50 p-6 rounded-lg flex items-start">
               <EnvelopeIcon className="w-8 h-8 text-red-600 mr-4 flex-shrink-0" />
               <div>
                 <h3 className="text-xl font-semibold text-gray-800">Email Support</h3>
-                <p className="text-gray-600 mt-1">support@vanraispices.com</p>
+                <p className="text-gray-600 mt-1">dhairya4507@gmail.com</p>
               </div>
             </div>
-            {/* Map */}
+
+            {/* Map Image Section */}
             <div className="rounded-lg overflow-hidden relative border border-gray-200">
+              {/* 2. Use the imported image here */}
               <img
-                src="https://i.imgur.com/gKq9XoX.png"
-                alt="Map of Vanrai Spices HQ"
+                src={MapImg}
+                alt="Map of Vanrai Spices "
                 className="w-full h-56 object-cover"
               />
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
@@ -183,8 +176,9 @@ const Contact = () => {
                 </span>
               </div>
             </div>
+
             <p className="text-center text-gray-600">
-              Vanrai Spices HQ, Spice Route, Mumbai, India
+              Vanrai Spices , Zare, Sangli, Maharashtra, India
             </p>
           </div>
 
