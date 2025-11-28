@@ -3,22 +3,26 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Configure Transporter with Brevo SMTP Credentials
 const transporter = nodemailer.createTransport({
   host: 'smtp-relay.brevo.com',
-  port: 2525, // Port 2525 is critical for Render!
+  port: 587, // Try 587 first, if timeout use 2525
   secure: false,
   auth: {
-    user: process.env.EMAIL_USER, // Your Brevo Login Email
-    pass: process.env.EMAIL_PASS, // Your Brevo SMTP Key
+    user: process.env.EMAIL_USER, // This must be the Brevo Login (e.g., 9cc7b2001@smtp-brevo.com)
+    pass: process.env.EMAIL_PASS, // This must be the Brevo API Key
   },
   tls: {
-    rejectUnauthorized: false, // Helps with some cloud SSL issues
-  },
+    rejectUnauthorized: false
+  }
 });
+
+// REPLACE THIS WITH YOUR ACTUAL VERIFIED EMAIL
+const SENDER_EMAIL = "dhairya4507@gmail.com"; // <--- PUT YOUR VERIFIED EMAIL HERE
 
 const sendEmail = async ({ to, subject, text, html }) => {
   const mailOptions = {
-    from: `"Vanrai Spices" <${process.env.EMAIL_USER}>`,
+    from: `"Vanrai Spices" <${SENDER_EMAIL}>`, // Use the verified email here
     to: to,
     subject: subject,
     text: text,
@@ -26,7 +30,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
   };
 
   try {
-    console.log(`Attempting to send email to ${to} via Brevo (Port 2525)...`);
+    console.log(`Attempting to send email to ${to}...`);
     const info = await transporter.sendMail(mailOptions);
     console.log('📬 Email sent successfully:', info.messageId);
     return true;
