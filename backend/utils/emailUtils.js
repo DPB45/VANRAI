@@ -3,32 +3,28 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create a transporter object using the default SMTP transport
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Use 'gmail' as the service
+  service: 'gmail', // Use Gmail preset
   auth: {
-    user: process.env.EMAIL_USER, // Your Gmail address
-    pass: process.env.EMAIL_PASS, // Your App Password
+    user: process.env.EMAIL_USER, // Your Gmail Address
+    pass: process.env.EMAIL_PASS, // Your 16-digit App Password
   },
+  // --- CRITICAL FIX FOR RENDER ---
+  family: 4, // Force IPv4. This fixes the "Connection timeout" error!
+  // -------------------------------
 });
 
-/**
- * Sends an email using Nodemailer.
- * @param {string} to - Recipient email address
- * @param {string} subject - Email subject line
- * @param {string} text - Plain text body
- * @param {string} html - HTML body (optional)
- */
 const sendEmail = async ({ to, subject, text, html }) => {
   const mailOptions = {
-    from: `"Vanrai Spices Support" <${process.env.EMAIL_USER}>`, // Sender address
-    to: to, // List of receivers
-    subject: subject, // Subject line
-    text: text, // Plain text body
-    html: html, // HTML body
+    from: `"Vanrai Spices" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: subject,
+    text: text,
+    html: html,
   };
 
   try {
+    console.log(`Attempting to send email to ${to} via Gmail...`);
     const info = await transporter.sendMail(mailOptions);
     console.log('📬 Email sent successfully:', info.messageId);
     return true;
