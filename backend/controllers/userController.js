@@ -198,31 +198,39 @@ const toggleTwoFactor = asyncHandler(async (req, res) => {
 // --- PASSWORD RESET ---
 
 // @desc    Request Password Reset
-// @route   POST /api/users/forgotpassword
-// @access  Public
 const requestPasswordReset = asyncHandler(async (req, res) => {
   const { email } = req.body;
+
+  // ... validation ...
+
   const user = await User.findOne({ email });
 
   if (user) {
     const resetToken = generateResetToken();
-    const resetUrl = `http://localhost:5173/resetpassword/${resetToken}`;
+    // Use your Vercel frontend URL here
+    const resetUrl = `https://vanrai.vercel.app/resetpassword/${resetToken}`;
 
-    // Send Email
-    await sendEmail({
+    // Send Email and CHECK SUCCESS
+    const emailSent = await sendEmail({
         to: user.email,
-        subject: `Password Reset Request for Vanrai Spices`,
-        text: `Your password reset link is: ${resetUrl}. This link is valid for 1 hour.`,
-        html: `<h2>Vanrai Spices Password Reset</h2><p>Click the link below to reset your password:</p><p><a href="${resetUrl}">Reset Password</a></p><p>If you did not request this, please ignore this email.</p>`,
+        subject: `Password Reset Request`,
+        text: `Reset link: ${resetUrl}`,
+        html: `<p>Click here to reset: <a href="${resetUrl}">Reset Password</a></p>`,
     });
-    console.log(`🔑 Password reset link sent to ${user.email}.`);
 
-    res.json({ message: 'Password reset link sent successfully.' });
+    // ONLY send success response if email was actually sent
+    if (emailSent) {
+        console.log(`🔑 Password reset link sent to ${user.email}.`);
+        res.json({ message: 'Password reset link sent successfully.' });
+    } else {
+        // If email failed, send 500 error so frontend knows
+        res.status(500);
+        throw new Error('Email server error. Please try again later.');
+    }
   } else {
-    res.json({ message: 'If a user exists, a password reset link has been sent to their email.' });
+    res.json({ message: 'If a user exists, a password reset link has been sent.' });
   }
 });
-
 // @desc    Reset password
 // @route   PUT /api/users/resetpassword/:token
 // @access  Public
