@@ -4,15 +4,15 @@ import axios from 'axios';
 import { LockClosedIcon, EnvelopeIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useUser } from '../context/UserContext';
 
-// --- Reusable tab button ---
+// --- Reusable tab button (Updated for mobile touch targets) ---
 const AuthTab = ({ title, activeTab, setActiveTab }) => (
     <button
         type="button"
         onClick={() => setActiveTab(title)}
-        className={`w-1/2 py-2 text-center text-sm font-medium rounded-md transition-colors duration-150 ease-in-out
+        className={`flex-1 py-3 text-center text-sm font-medium rounded-md transition-colors duration-150 ease-in-out
       ${activeTab === title
-                ? 'bg-white shadow text-gray-800' // Active tab
-                : 'text-gray-500 hover:text-gray-700' // Inactive tab
+            ? 'bg-white shadow text-gray-800' // Active tab
+            : 'text-gray-500 hover:text-gray-700' // Inactive tab
             }
     `}
     >
@@ -20,19 +20,19 @@ const AuthTab = ({ title, activeTab, setActiveTab }) => (
     </button>
 );
 
-// --- Reusable login method button ---
+// --- Reusable login method button (Updated for mobile flex) ---
 const MethodButton = ({ title, activeMethod, setActiveMethod }) => (
     <button
         type="button"
         onClick={() => setActiveMethod(title)}
-        className={`w-1/2 py-2 px-4 text-center font-semibold rounded-md transition-colors duration-150 ease-in-out
+        className={`flex-1 py-2.5 px-4 text-center text-sm font-semibold rounded-md transition-colors duration-150 ease-in-out whitespace-nowrap
       ${activeMethod === title
-                ? 'bg-red-600 text-white' // Active method
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50' // Inactive method
+            ? 'bg-red-600 text-white shadow-md'
+            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }
     `}
     >
-        {title}
+        {title === 'Email' ? 'Login with Email' : 'Login with OTP'}
     </button>
 );
 
@@ -68,7 +68,7 @@ const Login = () => {
             return true;
         }
 
-        if (activeMethod !== 'Email') return true; // Skip for OTP method
+        if (activeMethod !== 'Email') return true;
 
         if (activeTab === 'Sign Up' && name.trim() === '') {
             setError('Name is required.');
@@ -95,52 +95,44 @@ const Login = () => {
         setLoading(true);
 
         try {
-            // --- SIGN UP FLOW ---
             if (activeTab === 'Sign Up') {
                 const config = { headers: { 'Content-Type': 'application/json' } };
                 const { data } = await axios.post(
-                    '/api/users/register',
+                    'http://localhost:5001/api/users/register',
                     { name, email, password },
                     config
                 );
-                console.log('Registration Successful:', data);
                 login(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
                 setLoading(false);
                 navigate('/account/dashboard');
             }
-            // --- LOGIN FLOW ---
             else if (activeTab === 'Login') {
                 if (activeMethod === 'Email') {
                     let data;
 
                     if (show2FAInput) {
-                        // STEP 2: Verify 2FA Code
-                        const res = await axios.post('/api/users/login/verify2fa', {
+                        const res = await axios.post('http://localhost:5001/api/users/login/verify2fa', {
                             userId: tempUserId,
                             code: twoFactorCode
                         });
                         data = res.data;
                     } else {
-                        // STEP 1: Initial Login Request
-                        const res = await axios.post('/api/users/login', {
+                        const res = await axios.post('http://localhost:5001/api/users/login', {
                             email,
                             password
                         });
                         data = res.data;
                     }
 
-                    // Check if 2FA is required by backend
                     if (data.twoFactorRequired) {
                         setTempUserId(data.userId);
-                        setShow2FAInput(true); // Switch UI to code input
+                        setShow2FAInput(true);
                         setLoading(false);
-                        setError(''); // Clear any prev errors
-                        return; // Stop here, wait for user to enter code
+                        setError('');
+                        return;
                     }
 
-                    // Login Successful (No 2FA or 2FA verified)
-                    console.log('Login Successful:', data);
                     login(data);
                     localStorage.setItem('userInfo', JSON.stringify(data));
                     setLoading(false);
@@ -165,18 +157,20 @@ const Login = () => {
     };
 
     return (
-        <div className="flex items-center justify-center py-16 bg-gray-50 min-h-[calc(100vh-160px)]">
-            <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">
-                <div className="text-center mb-6">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-2">
+        <div className="flex items-center justify-center py-8 md:py-16 bg-gray-50 min-h-[calc(100vh-160px)] px-4">
+            <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-xl shadow-lg border border-gray-100">
+
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <h1 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 mb-2">
                         Welcome to Vanrai Spices
                     </h1>
-                    <p className="text-gray-500">
+                    <p className="text-sm text-gray-500 px-4">
                         Your journey to authentic Indian flavors begins here.
                     </p>
                 </div>
 
-                {/* Tabs (Hide if in 2FA mode to prevent switching) */}
+                {/* Tabs (Hide if in 2FA mode) */}
                 {!show2FAInput && (
                     <div className="bg-gray-100 p-1 rounded-lg flex mb-6">
                         <AuthTab title="Login" activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -186,14 +180,14 @@ const Login = () => {
 
                 {/* Methods (Hide if in 2FA mode) */}
                 {!show2FAInput && activeTab === 'Login' && (
-                    <div className="flex gap-4 mb-6">
+                    <div className="flex flex-col sm:flex-row gap-3 mb-6">
                         <MethodButton title="Email" activeMethod={activeMethod} setActiveMethod={setActiveMethod} />
                         <MethodButton title="OTP" activeMethod={activeMethod} setActiveMethod={setActiveMethod} />
                     </div>
                 )}
 
                 {error && (
-                    <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-center text-sm">
+                    <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 rounded-md text-center text-sm font-medium">
                         {error}
                     </div>
                 )}
@@ -202,18 +196,18 @@ const Login = () => {
                     {/* --- 2FA CODE INPUT UI --- */}
                     {show2FAInput ? (
                         <div className="space-y-6">
-                            <div className="text-center bg-blue-50 p-4 rounded-md text-blue-700 text-sm">
-                                <p className="font-semibold">Two-Factor Authentication Enabled</p>
-                                <p>We sent a verification code to your email.</p>
+                            <div className="text-center bg-blue-50 p-4 rounded-md text-blue-700 text-sm border border-blue-100">
+                                <p className="font-semibold mb-1">Two-Factor Authentication</p>
+                                <p>We sent a 6-digit code to your email.</p>
                             </div>
                             <div>
-                                <label htmlFor="2fa" className="block text-sm font-medium text-gray-700 mb-1 text-center">Enter 6-Digit Code</label>
+                                <label htmlFor="2fa" className="block text-sm font-medium text-gray-700 mb-2 text-center">Enter Code</label>
                                 <input
                                     type="text"
                                     id="2fa"
                                     value={twoFactorCode}
                                     onChange={(e) => setTwoFactorCode(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-center tracking-[0.5em] font-bold text-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-center tracking-[0.5em] font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                                     placeholder="000000"
                                     maxLength={6}
                                     autoFocus
@@ -223,7 +217,7 @@ const Login = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`w-full bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-full bg-red-600 text-white font-semibold py-3.5 px-8 rounded-lg hover:bg-red-700 transition-colors shadow-md hover:shadow-lg ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 {loading ? 'Verifying...' : 'Verify Code'}
                             </button>
@@ -231,7 +225,7 @@ const Login = () => {
                                 <button
                                     type="button"
                                     onClick={() => { setShow2FAInput(false); setError(''); }}
-                                    className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
+                                    className="text-sm text-gray-500 hover:text-gray-800 font-medium underline underline-offset-2"
                                 >
                                     Cancel
                                 </button>
@@ -239,101 +233,105 @@ const Login = () => {
                         </div>
                     ) : (
                         // --- STANDARD LOGIN/SIGNUP UI ---
-                        <>
+                        <div className="space-y-5">
                             {activeMethod === 'Email' && (
-                                <div className="space-y-4">
+                                <>
                                     {/* Name (Sign Up only) */}
                                     {activeTab === 'Sign Up' && (
                                         <div>
-                                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name</label>
-                                            <div className="mt-1 relative rounded-md shadow-sm">
-                                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><UserIcon className="w-5 h-5" /></span>
+                                            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <UserIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                                </div>
                                                 <input
                                                     type="text" id="name" value={name} onChange={(e) => setName(e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-red-500 focus:border-red-500 sm:text-sm"
                                                     placeholder="John Doe" required
                                                 />
                                             </div>
                                         </div>
                                     )}
+
                                     {/* Email */}
                                     <div>
-                                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                                        <div className="mt-1 relative rounded-md shadow-sm">
-                                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><EnvelopeIcon className="w-5 h-5" /></span>
+                                        <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1">Email Address</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <EnvelopeIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                            </div>
                                             <input
                                                 type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                                                placeholder="vanrai@example.com" required
+                                                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                                                placeholder="name@example.com" required
                                             />
                                         </div>
                                     </div>
+
                                     {/* Password */}
                                     <div>
-                                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                                        <div className="mt-1 relative rounded-md shadow-sm">
-                                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><LockClosedIcon className="w-5 h-5" /></span>
+                                        <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <LockClosedIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                            </div>
                                             <input
                                                 type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                                                placeholder="Enter your password" required
+                                                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                                                placeholder="••••••••" required
                                                 minLength={activeTab === 'Sign Up' ? 6 : undefined}
                                             />
-                                            {activeTab === 'Sign Up' && (<p className="mt-1 text-xs text-gray-500">Password must be at least 6 characters.</p>)}
                                         </div>
+                                        {activeTab === 'Sign Up' && (<p className="mt-1 text-xs text-gray-500">Must be at least 6 characters.</p>)}
                                     </div>
+
                                     {/* Remember/Forgot (Login only) */}
                                     {activeTab === 'Login' && (
-                                        <div className="flex items-center justify-between">
-                                            <label className="flex items-center text-sm text-gray-600">
-                                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500" />
-                                                <span className="ml-2">Remember me</span>
-                                            </label>
-                                            <Link to="/forgot-password" className="text-sm text-red-600 hover:underline">Forgot password?</Link>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <div className="flex items-center">
+                                                <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded" />
+                                                <label htmlFor="remember-me" className="ml-2 block text-gray-900">Remember me</label>
+                                            </div>
+                                            <Link to="/forgot-password" className="font-medium text-red-600 hover:text-red-500">
+                                                Forgot password?
+                                            </Link>
                                         </div>
                                     )}
+
                                     {/* Submit Button */}
                                     <button
                                         type="submit" disabled={loading}
-                                        className={`w-full bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        className={`w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                                     >
                                         {loading ? 'Processing...' : (activeTab === 'Login' ? 'Login' : 'Create Account')}
                                     </button>
-                                </div>
+                                </>
                             )}
 
-                            {/* OTP Form (Login only) */}
+                            {/* OTP Form Placeholder */}
                             {activeTab === 'Login' && activeMethod === 'OTP' && (
-                                <div className="space-y-4">
-                                    <div>
-                                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                                        <div className="mt-1">
-                                            <input
-                                                type="tel" id="phone"
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                                                placeholder="Enter your 10-digit phone number" required
-                                            />
-                                        </div>
-                                    </div>
+                                <div className="text-center py-8">
+                                    <p className="text-gray-500 mb-4">OTP Login feature coming soon!</p>
                                     <button
-                                        type="submit" disabled={loading}
-                                        className={`w-full bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        type="button"
+                                        onClick={() => setActiveMethod('Email')}
+                                        className="text-red-600 hover:underline text-sm font-medium"
                                     >
-                                        {loading ? 'Sending...' : 'Send OTP'}
+                                        Switch to Email Login
                                     </button>
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </form>
 
                 {!show2FAInput && (
-                    <div className="text-center mt-6">
-                        <button
+                    <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+                         <button
                             type="button" onClick={handleSimulateLogin}
-                            className="text-sm text-gray-500 hover:text-red-600 hover:underline"
+                            className="text-xs text-gray-400 hover:text-gray-600 hover:underline transition-colors"
                         >
-                            Simulate Login (for dashboard view)
+                            Simulate Login (Dev Mode)
                         </button>
                     </div>
                 )}

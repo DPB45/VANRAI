@@ -3,13 +3,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create a transporter object using the default SMTP transport
+// Create a transporter object using explicit SMTP settings
+// Port 465 (SSL) is often more reliable from cloud servers than the default
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Use 'gmail' as the service
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL
   auth: {
-    user: process.env.EMAIL_USER, // Your Gmail address
-    pass: process.env.EMAIL_PASS, // Your App Password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
+  // Increase timeout to prevent premature cutoffs
+  connectionTimeout: 10000,
 });
 
 /**
@@ -22,10 +27,10 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async ({ to, subject, text, html }) => {
   const mailOptions = {
     from: `"Vanrai Spices Support" <${process.env.EMAIL_USER}>`, // Sender address
-    to: to, // List of receivers
-    subject: subject, // Subject line
-    text: text, // Plain text body
-    html: html, // HTML body
+    to: to,
+    subject: subject,
+    text: text,
+    html: html,
   };
 
   try {
