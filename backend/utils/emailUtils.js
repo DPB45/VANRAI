@@ -4,17 +4,16 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.googlemail.com', // <-- Alternative Google Host
-  port: 465,
-  secure: true,
+  host: 'smtp-relay.brevo.com',
+  port: 2525, // Port 2525 is critical for Render!
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER, // Your Brevo Login Email
+    pass: process.env.EMAIL_PASS, // Your Brevo SMTP Key
   },
-  family: 4, // Force IPv4
-  connectionTimeout: 20000, // Increase timeout to 20 seconds
-  logger: true,
-  debug: true,
+  tls: {
+    rejectUnauthorized: false, // Helps with some cloud SSL issues
+  },
 });
 
 const sendEmail = async ({ to, subject, text, html }) => {
@@ -27,7 +26,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
   };
 
   try {
-    console.log(`Attempting to send email to ${to} via GoogleMail...`);
+    console.log(`Attempting to send email to ${to} via Brevo (Port 2525)...`);
     const info = await transporter.sendMail(mailOptions);
     console.log('📬 Email sent successfully:', info.messageId);
     return true;
