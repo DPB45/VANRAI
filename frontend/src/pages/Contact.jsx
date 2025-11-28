@@ -4,7 +4,7 @@ import { PhoneIcon, EnvelopeIcon, MapPinIcon } from '@heroicons/react/24/solid';
 
 // 1. Import your local map image
 // Make sure you have saved your image as 'contact-map.jpg' in the assets folder
-import MapImg from '../assets/contact-map.jpg';
+import MapImg from '../assets/contact-map.png';
 
 const Input = ({ id, label, type = 'text', placeholder, value, onChange, required = true }) => (
   <div>
