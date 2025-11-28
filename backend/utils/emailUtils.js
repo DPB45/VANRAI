@@ -3,29 +3,32 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Create a transporter object using the default SMTP transport
 const transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com', // Matches your screenshot
-  port: 2525, // Use 2525 to bypass Render's firewall (587 often fails)
-  secure: false,
+  service: 'gmail', // Use 'gmail' as the service
   auth: {
-    user: process.env.EMAIL_USER, // Set this to: 9cc7b2001@smtp-brevo.com
-    pass: process.env.EMAIL_PASS, // Set this to your Brevo Master Password
+    user: process.env.EMAIL_USER, // Your Gmail address
+    pass: process.env.EMAIL_PASS, // Your App Password
   },
 });
 
+/**
+ * Sends an email using Nodemailer.
+ * @param {string} to - Recipient email address
+ * @param {string} subject - Email subject line
+ * @param {string} text - Plain text body
+ * @param {string} html - HTML body (optional)
+ */
 const sendEmail = async ({ to, subject, text, html }) => {
   const mailOptions = {
-    // The "From" address can be anything you verified in Brevo,
-    // typically your own email or the one provided.
-    from: `"Vanrai Spices" <${process.env.EMAIL_USER}>`,
-    to: to,
-    subject: subject,
-    text: text,
-    html: html,
+    from: `"Vanrai Spices Support" <${process.env.EMAIL_USER}>`, // Sender address
+    to: to, // List of receivers
+    subject: subject, // Subject line
+    text: text, // Plain text body
+    html: html, // HTML body
   };
 
   try {
-    console.log(`Attempting to send email to ${to}...`);
     const info = await transporter.sendMail(mailOptions);
     console.log('📬 Email sent successfully:', info.messageId);
     return true;
