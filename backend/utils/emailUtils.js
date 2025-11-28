@@ -3,18 +3,22 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create a transporter object using explicit SMTP settings
-// Port 465 (SSL) is often more reliable from cloud servers than the default
+// Create a transporter object using Port 587 (STARTTLS)
+// This is often more reliable on cloud servers like Render than Port 465
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // Use SSL
+  port: 587,
+  secure: false, // Must be false for port 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // Increase timeout to prevent premature cutoffs
-  connectionTimeout: 10000,
+  tls: {
+    // This helps prevent some SSL handshake errors in cloud environments
+    ciphers: 'SSLv3',
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 10000, // 10 seconds
 });
 
 /**
@@ -26,7 +30,7 @@ const transporter = nodemailer.createTransport({
  */
 const sendEmail = async ({ to, subject, text, html }) => {
   const mailOptions = {
-    from: `"Vanrai Spices Support" <${process.env.EMAIL_USER}>`, // Sender address
+    from: `"Vanrai Spices Support" <${process.env.EMAIL_USER}>`,
     to: to,
     subject: subject,
     text: text,
@@ -38,7 +42,8 @@ const sendEmail = async ({ to, subject, text, html }) => {
     console.log('📬 Email sent successfully:', info.messageId);
     return true;
   } catch (error) {
-    console.error('❌ Nodemailer Error:', error);
+    // Log the error but return false so the server doesn't crash
+    console.error('❌ Nodemailer Error:', error.message);
     return false;
   }
 };
