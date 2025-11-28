@@ -30,14 +30,8 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(cors({
-                 origin: [
-                     "http://localhost:5173",                // Localhost
-                     "https://vanrai.vercel.app",            // <-- YOUR ACTUAL DOMAIN
-                     "https://vanrai-spices.vercel.app"      // (Optional) Keep for safety
-                 ],
-                 credentials: true
-             }));
+// --- UPDATE CORS TO ALLOW EVERYTHING ---
+app.use(cors());
 app.use(express.json());
 
 // Routes
