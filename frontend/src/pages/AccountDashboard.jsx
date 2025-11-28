@@ -1,16 +1,16 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import { useCart } from '../context/CartContext'; // <-- 1. Import useCart
 import {
   UserCircleIcon,
   ArchiveBoxIcon,
   MapPinIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-  CommandLineIcon // <-- Import icon for Admin
+  CommandLineIcon
 } from '@heroicons/react/24/outline';
 
-// --- Reusable Dashboard Section Card ---
 const DashboardCard = ({ title, icon: Icon, children, linkTo, isHighlight }) => (
     <div className={`p-6 rounded-lg shadow-md transition-shadow hover:shadow-lg ${isHighlight ? 'bg-red-50 border-2 border-red-100' : 'bg-white'}`}>
         <div className="flex items-center text-red-600 mb-4">
@@ -31,17 +31,16 @@ const DashboardCard = ({ title, icon: Icon, children, linkTo, isHighlight }) => 
     </div>
 );
 
-
-// Main Account Dashboard Page
 const AccountDashboard = () => {
   const navigate = useNavigate();
   const { userInfo, logout } = useUser();
+  const { clearCart } = useCart(); // <-- 2. Get clearCart function
 
   const handleLogout = () => {
+    clearCart(); // <-- 3. Clear the cart here
     logout();
     localStorage.removeItem('userInfo');
     navigate('/');
-    console.log('Logged out successfully.');
   };
 
   if (!userInfo) {
@@ -62,7 +61,6 @@ const AccountDashboard = () => {
           <h1 className="text-4xl font-bold text-gray-800 mb-2">My Account</h1>
           <p className="text-lg text-gray-600">Welcome back, {userInfo.name}!</p>
 
-          {/* Badge for Admin */}
           {userInfo.isAdmin && (
               <span className="inline-block mt-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">
                   ADMINISTRATOR
@@ -72,8 +70,6 @@ const AccountDashboard = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-          {/* --- THIS IS THE MISSING CARD --- */}
-          {/* It only appears if the user IS an admin */}
           {userInfo.isAdmin && (
             <DashboardCard
                 title="Admin Dashboard"
@@ -85,7 +81,6 @@ const AccountDashboard = () => {
                 <p className="font-bold">Restricted Access</p>
             </DashboardCard>
           )}
-          {/* -------------------------------- */}
 
           <DashboardCard title="My Profile" icon={UserCircleIcon} linkTo="/account/profile">
             <p><strong>Name:</strong> {userInfo.name}</p>

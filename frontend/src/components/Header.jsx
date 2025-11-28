@@ -9,24 +9,24 @@ import {
   ShoppingCartIcon,
   UserIcon,
   ArrowLeftOnRectangleIcon,
-  Bars3Icon, // Hamburger Icon
-  XMarkIcon  // Close Icon
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const Header = () => {
-  const { itemCount } = useCart();
+  const { itemCount, clearCart } = useCart(); // <-- Get clearCart function
   const { userInfo, logout } = useUser();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  // State for Mobile Menu
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const logoutHandler = () => {
+    clearCart(); // <-- 1. Clear the cart on logout
     logout();
     localStorage.removeItem('userInfo');
     navigate('/login');
-    setIsMobileMenuOpen(false); // Close menu on logout
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -34,7 +34,7 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
 
-          {/* --- 1. Logo --- */}
+          {/* Logo */}
           <Link
             to="/"
             className="text-2xl md:text-3xl font-semibold text-red-700 hover:text-red-800 transition-colors flex-shrink-0"
@@ -42,7 +42,7 @@ const Header = () => {
             {t('Vanrai Spices')}
           </Link>
 
-          {/* --- 2. Desktop Navigation (Hidden on Mobile) --- */}
+          {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-6">
             <Link to="/" className="text-gray-600 hover:text-red-600 font-medium">{t('Home')}</Link>
             <Link to="/shop" className="text-gray-600 hover:text-red-600 font-medium">{t('Shop')}</Link>
@@ -51,10 +51,9 @@ const Header = () => {
             <Link to="/contact" className="text-gray-600 hover:text-red-600 font-medium">{t('Contact Us')}</Link>
           </nav>
 
-          {/* --- 3. Right Side Actions (Search, Lang, Cart, Account) --- */}
+          {/* Right Side Actions */}
           <div className="flex items-center space-x-3 md:space-x-4">
 
-            {/* Search Bar (Hidden on very small screens, shown in menu instead) */}
             <div className="hidden md:block">
                <SearchBar />
             </div>
@@ -93,7 +92,7 @@ const Header = () => {
               )}
             </div>
 
-            {/* --- 4. Mobile Menu Button (Visible only on Mobile) --- */}
+            {/* Mobile Menu Button */}
             <button
               className="lg:hidden p-2 text-gray-600 hover:text-red-600 focus:outline-none"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -107,11 +106,9 @@ const Header = () => {
           </div>
         </div>
 
-        {/* --- 5. Mobile Menu Dropdown --- */}
+        {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
           <div className="lg:hidden mt-4 pb-4 border-t border-gray-100 animate-fade-in-down">
-
-            {/* Mobile Search */}
             <div className="mt-4 mb-4">
                 <SearchBar />
             </div>
@@ -123,7 +120,6 @@ const Header = () => {
               <Link to="/about" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('About Us')}</Link>
               <Link to="/contact" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('Contact Us')}</Link>
 
-              {/* Mobile Account Links */}
               <div className="pt-2">
                   {userInfo ? (
                     <div className="flex flex-col space-y-3">
