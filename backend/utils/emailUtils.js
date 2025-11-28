@@ -3,31 +3,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create a transporter object using Port 587 (STARTTLS)
-// This is often more reliable on cloud servers like Render than Port 465
+// Using the built-in 'gmail' service is often more reliable
+// for bypassing port blocks on cloud servers.
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // Must be false for port 587
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: {
-    // This helps prevent some SSL handshake errors in cloud environments
-    ciphers: 'SSLv3',
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000, // 10 seconds
 });
 
-/**
- * Sends an email using Nodemailer.
- * @param {string} to - Recipient email address
- * @param {string} subject - Email subject line
- * @param {string} text - Plain text body
- * @param {string} html - HTML body (optional)
- */
 const sendEmail = async ({ to, subject, text, html }) => {
   const mailOptions = {
     from: `"Vanrai Spices Support" <${process.env.EMAIL_USER}>`,
@@ -42,8 +27,8 @@ const sendEmail = async ({ to, subject, text, html }) => {
     console.log('📬 Email sent successfully:', info.messageId);
     return true;
   } catch (error) {
-    // Log the error but return false so the server doesn't crash
     console.error('❌ Nodemailer Error:', error.message);
+    // We return false so the app continues running even if email fails
     return false;
   }
 };
