@@ -26,13 +26,13 @@ const generateResetToken = () => {
 // @desc    Register a new user
 // @route   POST /api/users/register
 // @access  Public
-// @desc    Register a new user
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
 
-  if (!name || !email || !password || !validator.isEmail(email) || password.length < 6) {
+  // Basic validation (detailed validation handled by routes)
+  if (!name || !email || !password) {
      res.status(400);
-     throw new Error('Please check name, email format, and password length (min 6).');
+     throw new Error('Please fill in all fields.');
   }
 
   const userExists = await User.findOne({ email });
@@ -44,19 +44,13 @@ const registerUser = asyncHandler(async (req, res) => {
   const user = await User.create({ name, email, password });
 
   if (user) {
-    // --- FAIL-SAFE EMAIL SENDING ---
-    // We wrap this in a try-catch so if email fails, the user is STILL registered.
-    try {
-        await sendEmail({
-            to: user.email,
-            subject: `Welcome to Vanrai Spices, ${user.name}!`,
-            text: `Thank you for registering with us. Your journey to authentic Indian flavors begins now!`,
-            html: `<h2>Welcome to Vanrai Spices!</h2><p>Your journey to authentic Indian flavors begins now. We're excited to have you.</p>`,
-        });
-    } catch (emailError) {
-        console.error("⚠️ Welcome email failed to send, but user registered:", emailError.message);
-    }
-    // -------------------------------
+    // Send Welcome Email
+    await sendEmail({
+        to: user.email,
+        subject: `Welcome to Vanrai Spices, ${user.name}!`,
+        text: `Thank you for registering with us. Your journey to authentic Indian flavors begins now!`,
+        html: `<h2>Welcome to Vanrai Spices!</h2><p>Your journey to authentic Indian flavors begins now. We're excited to have you.</p>`,
+    });
 
     res.status(201).json({
       _id: user._id,

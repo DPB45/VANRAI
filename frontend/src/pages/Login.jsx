@@ -98,7 +98,7 @@ const Login = () => {
             if (activeTab === 'Sign Up') {
                 const config = { headers: { 'Content-Type': 'application/json' } };
                 const { data } = await axios.post(
-                    'http://localhost:5001/api/users/register',
+                    '/api/users/register',
                     { name, email, password },
                     config
                 );
@@ -112,13 +112,13 @@ const Login = () => {
                     let data;
 
                     if (show2FAInput) {
-                        const res = await axios.post('http://localhost:5001/api/users/login/verify2fa', {
+                        const res = await axios.post('/api/users/login/verify2fa', {
                             userId: tempUserId,
                             code: twoFactorCode
                         });
                         data = res.data;
                     } else {
-                        const res = await axios.post('http://localhost:5001/api/users/login', {
+                        const res = await axios.post('/api/users/login', {
                             email,
                             password
                         });
