@@ -12,7 +12,8 @@ import {
     toggleWishlist,
     getWishlist,
     verifyTwoFactorLogin, // <-- Import
-    toggleTwoFactor       // <-- Import
+    toggleTwoFactor,
+    deleteUser// <-- Import
 } from '../controllers/userController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
