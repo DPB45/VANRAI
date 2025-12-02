@@ -10,11 +10,12 @@ import {
   UserIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  HeartIcon // <-- 1. Import Heart Icon
 } from '@heroicons/react/24/outline';
 
 const Header = () => {
-  const { itemCount, clearCart } = useCart(); // <-- Get clearCart function
+  const { itemCount, clearCart } = useCart();
   const { userInfo, logout } = useUser();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -22,7 +23,7 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const logoutHandler = () => {
-    clearCart(); // <-- 1. Clear the cart on logout
+    clearCart();
     logout();
     localStorage.removeItem('userInfo');
     navigate('/login');
@@ -35,10 +36,7 @@ const Header = () => {
         <div className="flex justify-between items-center">
 
           {/* Logo */}
-          <Link
-            to="/"
-            className="text-2xl md:text-3xl font-semibold text-red-700 hover:text-red-800 transition-colors flex-shrink-0"
-          >
+          <Link to="/" className="text-2xl md:text-3xl font-semibold text-red-700 hover:text-red-800 transition-colors flex-shrink-0">
             {t('Vanrai Spices')}
           </Link>
 
@@ -54,13 +52,14 @@ const Header = () => {
           {/* Right Side Actions */}
           <div className="flex items-center space-x-3 md:space-x-4">
 
-            <div className="hidden md:block">
-               <SearchBar />
-            </div>
+            <div className="hidden md:block"><SearchBar /></div>
+            <div className="hidden md:block"><LanguageSwitcher /></div>
 
-            <div className="hidden md:block">
-              <LanguageSwitcher />
-            </div>
+            {/* --- 2. WISHLIST ICON --- */}
+            <Link to="/wishlist" className="relative p-2 text-gray-600 hover:text-red-600" title="Wishlist">
+              <HeartIcon className="h-6 w-6" />
+            </Link>
+            {/* ----------------------- */}
 
             {/* Cart Icon */}
             <Link to="/cart" className="relative p-2 text-gray-600 hover:text-red-600">
@@ -72,7 +71,7 @@ const Header = () => {
               )}
             </Link>
 
-            {/* Desktop Account Button */}
+            {/* Desktop Account */}
             <div className="hidden lg:block">
               {userInfo ? (
                 <div className="flex items-center gap-3">
@@ -93,32 +92,27 @@ const Header = () => {
             </div>
 
             {/* Mobile Menu Button */}
-            <button
-              className="lg:hidden p-2 text-gray-600 hover:text-red-600 focus:outline-none"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? (
-                <XMarkIcon className="h-7 w-7" />
-              ) : (
-                <Bars3Icon className="h-7 w-7" />
-              )}
+            <button className="lg:hidden p-2 text-gray-600 hover:text-red-600 focus:outline-none" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+              {isMobileMenuOpen ? <XMarkIcon className="h-7 w-7" /> : <Bars3Icon className="h-7 w-7" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="lg:hidden mt-4 pb-4 border-t border-gray-100 animate-fade-in-down">
-            <div className="mt-4 mb-4">
-                <SearchBar />
-            </div>
-
+            <div className="mt-4 mb-4"><SearchBar /></div>
             <nav className="flex flex-col space-y-3">
               <Link to="/" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('Home')}</Link>
               <Link to="/shop" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('Shop')}</Link>
               <Link to="/recipes" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('Recipes')}</Link>
               <Link to="/about" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('About Us')}</Link>
               <Link to="/contact" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('Contact Us')}</Link>
+
+              {/* Mobile Wishlist Link */}
+              <Link to="/wishlist" className="flex items-center gap-2 text-gray-700 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>
+                 <HeartIcon className="h-5 w-5" /> My Wishlist
+              </Link>
 
               <div className="pt-2">
                   {userInfo ? (
@@ -136,14 +130,10 @@ const Header = () => {
                     </Link>
                   )}
               </div>
-
-              <div className="pt-2">
-                 <LanguageSwitcher />
-              </div>
+              <div className="pt-2"><LanguageSwitcher /></div>
             </nav>
           </div>
         )}
-
       </div>
     </header>
   );
