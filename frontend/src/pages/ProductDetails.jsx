@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   PlusIcon, MinusIcon, ChevronLeftIcon, ChevronRightIcon,
-  HandThumbUpIcon, PencilSquareIcon, TrashIcon
+  HandThumbUpIcon, PencilSquareIcon, TrashIcon, UserIcon // <-- ADDED UserIcon HERE
 } from '@heroicons/react/24/solid';
 import { HandThumbUpIcon as HandThumbUpOutline } from '@heroicons/react/24/outline';
 import RelatedProductCard from '../components/RelatedProductCard';
@@ -46,7 +46,7 @@ const ProductDetails = () => {
     const [reviewComment, setReviewComment] = useState('');
     const [reviewLoading, setReviewLoading] = useState(false);
     const [submittedReview, setSubmittedReview] = useState(false);
-    const [isEditing, setIsEditing] = useState(false); // New state for edit mode
+    const [isEditing, setIsEditing] = useState(false);
     const [reviewError, setReviewError] = useState('');
 
     const { addToCart } = useCart();
@@ -82,7 +82,6 @@ const ProductDetails = () => {
             const existingReview = product.reviews.find(r => r.user.toString() === userInfo._id);
             if (existingReview) {
                 setSubmittedReview(true);
-                // Pre-fill for editing
                 if (isEditing) {
                     setReviewRating(existingReview.rating);
                     setReviewComment(existingReview.comment);
@@ -94,8 +93,6 @@ const ProductDetails = () => {
     }, [product, userInfo, isEditing]);
 
 
-    // --- Review Handlers ---
-
     const submitReviewHandler = async (e) => {
         e.preventDefault();
         setReviewError('');
@@ -106,17 +103,14 @@ const ProductDetails = () => {
             const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userInfo.token}` } };
 
             if (isEditing) {
-                // UPDATE EXISTING REVIEW
                 await axios.put(`http://localhost:5001/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
                 toast.success('Review updated successfully!');
                 setIsEditing(false);
             } else {
-                // CREATE NEW REVIEW
                 await axios.post(`http://localhost:5001/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
                 toast.success('Review submitted successfully!');
             }
 
-            // Reset Form & Refresh Data
             setReviewComment('');
             setReviewRating(0);
             setReviewLoading(false);
@@ -148,7 +142,7 @@ const ProductDetails = () => {
         try {
             const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
             await axios.put(`http://localhost:5001/api/products/${id}/reviews/${reviewId}/like`, {}, config);
-            fetchProductDetails(); // Refresh to show updated likes
+            fetchProductDetails();
         } catch (error) {
             console.error(error);
         }
@@ -202,7 +196,6 @@ const ProductDetails = () => {
                         <div className="text-left space-y-8">
                             <h3 className="text-xl font-bold text-gray-800">Customer Reviews ({product.numReviews})</h3>
 
-                            {/* Review Form or User's Review Display */}
                             <div className="border-b pb-6">
                                 {!userInfo ? (
                                     <p className="text-red-500 text-center">Please <Link to="/login" className="underline">log in</Link> to submit a review.</p>
@@ -278,7 +271,7 @@ const ProductDetails = () => {
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex items-center space-x-2">
                                                         <div className="bg-gray-200 rounded-full p-1">
-                                                            <UserIcon className="w-4 h-4 text-gray-500" /> {/* Placeholder avatar */}
+                                                            <UserIcon className="w-4 h-4 text-gray-500" />
                                                         </div>
                                                         <span className="font-semibold text-gray-800">{review.name}</span>
                                                         <span className="text-xs text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</span>
