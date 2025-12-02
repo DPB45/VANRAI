@@ -57,10 +57,10 @@ const ProductDetails = () => {
         setLoading(true);
         setError(null);
         try {
-            const { data: productData } = await axios.get(`http://localhost:5001/api/products/${id}`);
+            const { data: productData } = await axios.get(`/api/products/${id}`);
             setProduct(productData);
 
-            const { data } = await axios.get(`http://localhost:5001/api/products`);
+            const { data } = await axios.get(`/api/products`);
             const allProductsArray = data.products;
             setRelatedProducts(allProductsArray.filter((p) => p._id !== id).slice(0, 4));
 
@@ -103,11 +103,11 @@ const ProductDetails = () => {
             const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userInfo.token}` } };
 
             if (isEditing) {
-                await axios.put(`http://localhost:5001/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
+                await axios.put(`/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
                 toast.success('Review updated successfully!');
                 setIsEditing(false);
             } else {
-                await axios.post(`http://localhost:5001/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
+                await axios.post(`/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
                 toast.success('Review submitted successfully!');
             }
 
@@ -126,7 +126,7 @@ const ProductDetails = () => {
         if (window.confirm('Are you sure you want to delete your review?')) {
             try {
                 const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-                await axios.delete(`http://localhost:5001/api/products/${id}/reviews`, config);
+                await axios.delete(`/api/products/${id}/reviews`, config);
                 toast.success('Review deleted.');
                 setSubmittedReview(false);
                 setIsEditing(false);
@@ -141,7 +141,7 @@ const ProductDetails = () => {
         if (!userInfo) { toast.error("Please log in to like reviews."); return; }
         try {
             const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-            await axios.put(`http://localhost:5001/api/products/${id}/reviews/${reviewId}/like`, {}, config);
+            await axios.put(`api/products/${id}/reviews/${reviewId}/like`, {}, config);
             fetchProductDetails();
         } catch (error) {
             console.error(error);
