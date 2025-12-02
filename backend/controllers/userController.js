@@ -299,6 +299,18 @@ const getWishlist = asyncHandler(async (req, res) => {
   }
 });
 
+// delete user
+const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+
+  if (user) {
+    await User.deleteOne({ _id: user._id });
+    res.json({ message: 'User removed' });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
 export {
     registerUser,
     authUser,
@@ -309,5 +321,6 @@ export {
     toggleWishlist,
     getWishlist,
     verifyTwoFactorLogin,
-    toggleTwoFactor
+    toggleTwoFactor,
+    deleteUser
 };

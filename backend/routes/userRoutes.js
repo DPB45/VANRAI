@@ -94,5 +94,6 @@ router.route('/wishlist')
 
 // Admin Route: Get all users
 router.route('/').get(protect, admin, getUsers);
-
+router.route('/:id') // <-- Add this block
+    .delete(protect, admin, deleteUser);
 export default router;
