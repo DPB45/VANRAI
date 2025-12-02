@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 import OrderPlacedModal from '../components/OrderPlacedModal';
+// 1. Import TrashIcon
+import { TrashIcon } from '@heroicons/react/24/outline';
 
-// Reusable form input component (no changes)
 const FormInput = ({ label, id, name, value, onChange, error, isOptional = false, required = true }) => (
     <div className="mb-4">
         <label htmlFor={id} className="block text-sm font-semibold text-gray-600 mb-1">
@@ -25,9 +26,9 @@ const FormInput = ({ label, id, name, value, onChange, error, isOptional = false
     </div>
 );
 
-
 const Checkout = () => {
-    const { cartItems, subtotal, shipping, total, clearCart } = useCart();
+    // 2. Get removeFromCart from context
+    const { cartItems, subtotal, shipping, total, clearCart, removeFromCart } = useCart();
     const { userInfo } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -44,6 +45,13 @@ const Checkout = () => {
         postalCode: '',
         country: 'India',
     });
+
+    // Redirect if cart becomes empty while on this page
+    useEffect(() => {
+        if (cartItems.length === 0 && !isModalOpen) {
+            navigate('/shop');
+        }
+    }, [cartItems, navigate, isModalOpen]);
 
     const handleAddressChange = (e) => {
         const { name, value } = e.target;
@@ -79,12 +87,6 @@ const Checkout = () => {
             setError('Please log in to place an order.');
             setLoading(false);
             navigate('/login');
-            return;
-        }
-        if (cartItems.length === 0) {
-            setError('Your cart is empty.');
-            setLoading(false);
-            navigate('/shop');
             return;
         }
 
@@ -146,7 +148,6 @@ const Checkout = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
                         {/* --- LEFT COLUMN: Address & Payment --- */}
                         <div>
-                            {/* Delivery Address */}
                             <section>
                                 <h2 className="text-2xl font-semibold text-gray-800 mb-6" style={{ color: '#6b4423' }}>
                                     Delivery Address
@@ -164,7 +165,6 @@ const Checkout = () => {
                                 </div>
                             </section>
 
-                            {/* --- Payment Option --- */}
                             <section className="mt-12">
                                 <h2 className="text-2xl font-semibold text-gray-800 mb-6" style={{ color: '#6b4423' }}>
                                     Payment Option
@@ -180,18 +180,37 @@ const Checkout = () => {
                         <div>
                             <div className="bg-gray-50 p-8 rounded-lg shadow-md sticky top-32">
                                 <h2 className="text-2xl font-semibold text-gray-800 mb-6">Order Summary</h2>
+
+                                {/* Item List with Delete Option */}
                                 <div className="space-y-4 mb-6 max-h-60 overflow-y-auto pr-2">
                                     {cartItems.map((item) => (
-                                        <div key={item._id} className="flex justify-between items-center text-sm">
-                                            <div className="flex items-center">
+                                        <div key={item._id} className="flex justify-between items-center text-sm border-b pb-3">
+                                            <div className="flex items-center flex-grow">
                                                 <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded-md object-cover mr-3" />
-                                                <span className="text-gray-800">{item.name} (x{item.quantity})</span>
+                                                <div>
+                                                    <span className="text-gray-800 font-medium block">{item.name}</span>
+                                                    <span className="text-gray-500 text-xs">Qty: {item.quantity}</span>
+                                                </div>
                                             </div>
-                                            <span className="font-semibold text-gray-800">₹{(item.price * item.quantity).toFixed(2)}</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-semibold text-gray-800">₹{(item.price * item.quantity).toFixed(2)}</span>
+
+                                                {/* 3. Remove Button */}
+                                                <button
+                                                    type="button" // IMPORTANT: prevent form submit
+                                                    onClick={() => removeFromCart(item._id)}
+                                                    className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                                                    title="Remove Item"
+                                                >
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                     {cartItems.length === 0 && <p className="text-gray-500">Cart is empty</p>}
                                 </div>
+
+                                {/* Totals */}
                                 <div className="space-y-3 border-t border-gray-300 pt-6">
                                     <div className="flex justify-between text-lg">
                                         <span className="text-gray-600">Subtotal:</span>
@@ -207,6 +226,7 @@ const Checkout = () => {
                                         <span className="text-red-600">₹{total.toFixed(2)}</span>
                                     </div>
                                 </div>
+
                                 <button
                                     type="submit"
                                     disabled={loading || cartItems.length === 0 || !userInfo}

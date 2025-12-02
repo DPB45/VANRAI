@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
-// Define the Review Schema first
+// Define the Review Schema
 const reviewSchema = mongoose.Schema(
   {
-    name: { type: String, required: true }, // Reviewer's name
+    name: { type: String, required: true },
     rating: { type: Number, required: true },
     comment: { type: String, required: true },
     user: {
@@ -11,35 +11,44 @@ const reviewSchema = mongoose.Schema(
       required: true,
       ref: 'User',
     },
+    // --- NEW FIELD: Likes ---
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User', // Stores User IDs to prevent duplicate likes
+      },
+    ],
+    // ------------------------
   },
   {
     timestamps: true,
   }
 );
 
-const productSchema = mongoose.Schema({
+const productSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true },
   imageUrl: { type: String, required: true },
 
-  // --- ADDED FIELDS ---
-  reviews: [reviewSchema], // Array of review sub-documents
-  rating: { type: Number, required: true, default: 0 }, // Overall average rating
-  numReviews: { type: Number, required: true, default: 0 }, // Total number of reviews
-  // --------------------
+  reviews: [reviewSchema], // Array of reviews
 
+  rating: { type: Number, required: true, default: 0 },
+  numReviews: { type: Number, required: true, default: 0 },
   category: { type: String, required: true },
   inStock: { type: Boolean, required: true, default: true },
+  user: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+  },
 }, {
   timestamps: true,
 });
 
-// --- LOGIC: Calculate Average Rating ---
-// Define a static method to recalculate ratings for a product
+// --- Static Method: Calculate Average Rating ---
 productSchema.statics.updateAverageRating = async function (productId) {
     const product = await this.findById(productId);
-
     if (product) {
         if (product.reviews.length === 0) {
             product.rating = 0;
@@ -47,13 +56,12 @@ productSchema.statics.updateAverageRating = async function (productId) {
         } else {
             const totalRating = product.reviews.reduce((acc, item) => item.rating + acc, 0);
             product.numReviews = product.reviews.length;
-            // Calculate average, rounded to 1 decimal place
+            // Calculate average and round to 1 decimal place
             product.rating = Math.round((totalRating / product.numReviews) * 10) / 10;
         }
         await product.save();
     }
 };
-// -------------------------------------
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

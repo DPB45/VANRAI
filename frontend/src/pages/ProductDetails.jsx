@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { PlusIcon, MinusIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import {
+  PlusIcon, MinusIcon, ChevronLeftIcon, ChevronRightIcon,
+  HandThumbUpIcon, PencilSquareIcon, TrashIcon
+} from '@heroicons/react/24/solid';
+import { HandThumbUpIcon as HandThumbUpOutline } from '@heroicons/react/24/outline';
 import RelatedProductCard from '../components/RelatedProductCard';
 import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
 import toast from 'react-hot-toast';
-import Meta from '../components/Meta'; // <-- Import Meta
+import Meta from '../components/Meta';
 
 const TabButton = ({ title, activeTab, setActiveTab }) => (
     <button
@@ -37,10 +41,12 @@ const ProductDetails = () => {
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState('Description');
 
+    // Review State
     const [reviewRating, setReviewRating] = useState(0);
     const [reviewComment, setReviewComment] = useState('');
     const [reviewLoading, setReviewLoading] = useState(false);
     const [submittedReview, setSubmittedReview] = useState(false);
+    const [isEditing, setIsEditing] = useState(false); // New state for edit mode
     const [reviewError, setReviewError] = useState('');
 
     const { addToCart } = useCart();
@@ -51,16 +57,15 @@ const ProductDetails = () => {
         setLoading(true);
         setError(null);
         try {
-            const { data: productData } = await axios.get(`/api/products/${id}`);
+            const { data: productData } = await axios.get(`http://localhost:5001/api/products/${id}`);
             setProduct(productData);
 
-            const { data } = await axios.get(`/api/products`);
+            const { data } = await axios.get(`http://localhost:5001/api/products`);
             const allProductsArray = data.products;
             setRelatedProducts(allProductsArray.filter((p) => p._id !== id).slice(0, 4));
 
         } catch (err) {
             setError('Failed to load product details.');
-            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -69,24 +74,83 @@ const ProductDetails = () => {
     useEffect(() => {
         window.scrollTo(0, 0);
         fetchProductDetails();
+    }, [id]);
+
+    // Check if user has reviewed
+    useEffect(() => {
         if (product && userInfo) {
-            setSubmittedReview(product.reviews.some(r => r.user.toString() === userInfo._id));
+            const existingReview = product.reviews.find(r => r.user.toString() === userInfo._id);
+            if (existingReview) {
+                setSubmittedReview(true);
+                // Pre-fill for editing
+                if (isEditing) {
+                    setReviewRating(existingReview.rating);
+                    setReviewComment(existingReview.comment);
+                }
+            } else {
+                setSubmittedReview(false);
+            }
         }
-    }, [id, submittedReview]);
+    }, [product, userInfo, isEditing]);
+
+
+    // --- Review Handlers ---
 
     const submitReviewHandler = async (e) => {
         e.preventDefault();
         setReviewError('');
         if (reviewRating === 0 || reviewComment === '') { setReviewError('Please select a rating and enter a comment.'); return; }
+
         setReviewLoading(true);
         try {
             const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userInfo.token}` } };
-            await axios.post(`/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
-            setReviewComment(''); setReviewRating(0); setReviewLoading(false); setSubmittedReview(true);
-            toast.success('Thank you for your review!');
-        } catch (error) {
-            setReviewError(error.response?.data?.message || 'Failed to submit review.');
+
+            if (isEditing) {
+                // UPDATE EXISTING REVIEW
+                await axios.put(`http://localhost:5001/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
+                toast.success('Review updated successfully!');
+                setIsEditing(false);
+            } else {
+                // CREATE NEW REVIEW
+                await axios.post(`http://localhost:5001/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment }, config);
+                toast.success('Review submitted successfully!');
+            }
+
+            // Reset Form & Refresh Data
+            setReviewComment('');
+            setReviewRating(0);
             setReviewLoading(false);
+            fetchProductDetails();
+
+        } catch (error) {
+            setReviewError(error.response?.data?.message || 'Operation failed.');
+            setReviewLoading(false);
+        }
+    };
+
+    const deleteReviewHandler = async () => {
+        if (window.confirm('Are you sure you want to delete your review?')) {
+            try {
+                const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+                await axios.delete(`http://localhost:5001/api/products/${id}/reviews`, config);
+                toast.success('Review deleted.');
+                setSubmittedReview(false);
+                setIsEditing(false);
+                fetchProductDetails();
+            } catch (error) {
+                toast.error('Failed to delete review.');
+            }
+        }
+    };
+
+    const handleLikeReview = async (reviewId) => {
+        if (!userInfo) { toast.error("Please log in to like reviews."); return; }
+        try {
+            const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+            await axios.put(`http://localhost:5001/api/products/${id}/reviews/${reviewId}/like`, {}, config);
+            fetchProductDetails(); // Refresh to show updated likes
+        } catch (error) {
+            console.error(error);
         }
     };
 
@@ -94,15 +158,13 @@ const ProductDetails = () => {
     const handleAddToCart = () => { if (product) { addToCart(product, quantity); toast.success(`${quantity} x ${product.name} added to cart!`); } };
     const handleBuyNow = () => { if (product) { addToCart(product, quantity); navigate('/checkout'); } };
 
-    if (loading) return <p className="text-center py-20">Loading product...</p>;
-    if (error) return <p className="text-center py-20 text-red-500 bg-red-100 p-4 rounded">{error}</p>;
+    if (loading) return <p className="text-center py-20">Loading...</p>;
+    if (error) return <p className="text-center py-20 text-red-500">{error}</p>;
     if (!product) return <p className="text-center py-20">Product not found.</p>;
 
     return (
         <div className="container mx-auto px-4 py-12">
-            {/* --- DYNAMIC SEO META TAGS --- */}
             <Meta title={`${product.name} | Vanrai Spices`} description={product.description} />
-            {/* ----------------------------- */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div><img src={product.imageUrl} alt={product.name} className="w-full h-auto object-cover rounded-lg shadow-lg"/></div>
@@ -131,32 +193,111 @@ const ProductDetails = () => {
                     <TabButton title="Customer Reviews" activeTab={activeTab} setActiveTab={setActiveTab} />
                 </div>
                 <div className="py-8 max-w-3xl mx-auto text-center text-gray-600">
-                    {activeTab === 'Description' && <p>{product.description} A premium spice blend for your kitchen.</p>}
-                    {activeTab === 'Ingredients' && <p>Corinder, Cumin, Chili, Turmeric, Salt, Spices.</p>}
-                    {activeTab === 'Nutritional Info' && <p>Energy: 350 kcal, Protein: 12g, Carbs: 60g.</p>}
+                    {activeTab === 'Description' && <p>{product.description} Premium quality.</p>}
+                    {activeTab === 'Ingredients' && <p>100% Natural Spices.</p>}
+                    {activeTab === 'Nutritional Info' && <p>Rich in flavor and health benefits.</p>}
+
+                    {/* --- REVIEWS SECTION --- */}
                     {activeTab === 'Customer Reviews' && (
                         <div className="text-left space-y-8">
                             <h3 className="text-xl font-bold text-gray-800">Customer Reviews ({product.numReviews})</h3>
-                            <div className="border-b pb-4">
-                                <h4 className="text-lg font-semibold mb-3">Write a Review</h4>
-                                {!userInfo ? (<p className="text-red-500">Please <Link to="/login" className="underline">log in</Link> to submit a review.</p>) : submittedReview ? (<p className="text-green-600">You have already reviewed this product.</p>) : (
-                                    <form onSubmit={submitReviewHandler} className="space-y-4">
-                                        {reviewError && <div className="p-2 bg-red-100 text-red-600 text-sm rounded">{reviewError}</div>}
-                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Rating</label><select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))} className="w-full border border-gray-300 rounded-md py-2 px-3" required><option value="0">Select...</option><option value="1">1 - Poor</option><option value="2">2 - Fair</option><option value="3">3 - Good</option><option value="4">4 - Very Good</option><option value="5">5 - Excellent</option></select></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Comment</label><textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} rows="3" className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-red-500" required></textarea></div>
-                                        <button type="submit" disabled={reviewLoading} className={`bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700 ${reviewLoading ? 'opacity-50' : ''}`}>{reviewLoading ? 'Submitting...' : 'Submit Review'}</button>
-                                    </form>
+
+                            {/* Review Form or User's Review Display */}
+                            <div className="border-b pb-6">
+                                {!userInfo ? (
+                                    <p className="text-red-500 text-center">Please <Link to="/login" className="underline">log in</Link> to submit a review.</p>
+                                ) : (
+                                    <>
+                                        {submittedReview && !isEditing ? (
+                                            <div className="bg-blue-50 p-4 rounded-md border border-blue-200 flex justify-between items-center">
+                                                <div>
+                                                    <p className="text-blue-800 font-semibold">You have reviewed this product.</p>
+                                                    <p className="text-sm text-blue-600">Would you like to update or delete it?</p>
+                                                </div>
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={() => setIsEditing(true)}
+                                                        className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-800"
+                                                    >
+                                                        <PencilSquareIcon className="w-4 h-4" /> Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={deleteReviewHandler}
+                                                        className="flex items-center gap-1 text-sm font-semibold text-red-600 hover:text-red-800"
+                                                    >
+                                                        <TrashIcon className="w-4 h-4" /> Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <h4 className="text-lg font-semibold mb-3">{isEditing ? 'Update Your Review' : 'Write a Review'}</h4>
+                                                <form onSubmit={submitReviewHandler} className="space-y-4">
+                                                    {reviewError && <div className="p-2 bg-red-100 text-red-600 text-sm rounded">{reviewError}</div>}
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                                                        <select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))} className="w-full border border-gray-300 rounded-md py-2 px-3" required>
+                                                            <option value="0">Select...</option>
+                                                            <option value="1">1 - Poor</option>
+                                                            <option value="2">2 - Fair</option>
+                                                            <option value="3">3 - Good</option>
+                                                            <option value="4">4 - Very Good</option>
+                                                            <option value="5">5 - Excellent</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                                                        <textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} rows="3" className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-red-500" required></textarea>
+                                                    </div>
+                                                    <div className="flex gap-3">
+                                                        <button type="submit" disabled={reviewLoading} className={`bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700 ${reviewLoading ? 'opacity-50' : ''}`}>
+                                                            {reviewLoading ? 'Submitting...' : (isEditing ? 'Update Review' : 'Submit Review')}
+                                                        </button>
+                                                        {isEditing && (
+                                                            <button type="button" onClick={() => setIsEditing(false)} className="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-gray-300">
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </form>
+                                            </>
+                                        )}
+                                    </>
                                 )}
                             </div>
-                            {product.reviews.length === 0 ? (<p className="text-gray-500">No reviews yet.</p>) : (
+
+                            {/* Reviews List */}
+                            {product.reviews.length === 0 ? (
+                                <p className="text-gray-500">No reviews yet. Be the first!</p>
+                            ) : (
                                 <div className="space-y-6">
-                                    {product.reviews.map((review) => (
-                                        <div key={review._id} className="border-b pb-4">
-                                            <div className="flex items-center space-x-2 mb-1"><span className="font-semibold text-gray-800">{review.name}</span><span className="text-sm text-gray-500">on {new Date(review.createdAt).toLocaleDateString()}</span></div>
-                                            <div className="mb-2">{renderRating(review.rating)}</div>
-                                            <p className="text-gray-700">{review.comment}</p>
-                                        </div>
-                                    ))}
+                                    {product.reviews.map((review) => {
+                                        const isLiked = userInfo && review.likes && review.likes.includes(userInfo._id);
+                                        return (
+                                            <div key={review._id} className="border-b pb-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <div className="bg-gray-200 rounded-full p-1">
+                                                            <UserIcon className="w-4 h-4 text-gray-500" /> {/* Placeholder avatar */}
+                                                        </div>
+                                                        <span className="font-semibold text-gray-800">{review.name}</span>
+                                                        <span className="text-xs text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="mb-2">{renderRating(review.rating)}</div>
+                                                <p className="text-gray-700 mb-3">{review.comment}</p>
+
+                                                {/* Like Button */}
+                                                <button
+                                                    onClick={() => handleLikeReview(review._id)}
+                                                    className={`flex items-center gap-1 text-sm font-medium transition-colors ${isLiked ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                                >
+                                                    {isLiked ? <HandThumbUpIcon className="w-4 h-4" /> : <HandThumbUpOutline className="w-4 h-4" />}
+                                                    <span>Helpful ({review.likes ? review.likes.length : 0})</span>
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

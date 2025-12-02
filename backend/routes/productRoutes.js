@@ -5,23 +5,31 @@ import {
   getProductById,
   createProductReview,
   deleteProduct,
-  createProduct, // <-- Ensure this is imported
-  updateProduct
+  createProduct,
+  updateProduct,
+  updateProductReview, // <-- Import
+  deleteProductReview, // <-- Import
+  toggleReviewLike     // <-- Import
 } from '../controllers/productController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
-// Review Route
-router.route('/:id/reviews').post(protect, createProductReview);
+// --- Review Routes ---
+router.route('/:id/reviews')
+    .post(protect, createProductReview)
+    .put(protect, updateProductReview)    // <-- New: Edit Review
+    .delete(protect, deleteProductReview); // <-- New: Delete Review
 
-// --- ROOT ROUTE ( /api/products ) ---
+router.route('/:id/reviews/:reviewId/like')
+    .put(protect, toggleReviewLike);       // <-- New: Like Review
+
+// --- Product Routes ---
 router.route('/')
-  .get(getProducts)                    // GET = Fetch all
-  .post(protect, admin, createProduct); // POST = Create New (This was missing or broken)
+  .get(getProducts)
+  .post(protect, admin, createProduct);
 
-// --- ID ROUTE ( /api/products/:id ) ---
 router.route('/:id')
-  .get(getProductById)                 // GET = Fetch one
-  .delete(protect, admin, deleteProduct) // DELETE = Remove one
-  .put(protect, admin, updateProduct);   // PUT = Update one
+  .get(getProductById)
+  .delete(protect, admin, deleteProduct)
+  .put(protect, admin, updateProduct);
 
 export default router;
