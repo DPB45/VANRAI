@@ -57,7 +57,7 @@ const ProductList = () => {
   const createProductHandler = async () => {
       try {
           // Create a sample product instantly
-          const { data: createdProduct } = await axios.post('http://localhost:5001/api/products', {
+          const { data: createdProduct } = await axios.post('/api/products', {
               name: 'Sample Name',
               price: 0,
               description: 'Sample description',
