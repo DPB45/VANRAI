@@ -17,7 +17,7 @@ const CartItem = ({ item }) => {
         />
         <div className="ml-6">
           <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
-          <p className="text-gray-500">{item.category}</p>
+          <p className="text-gray-500">{item.weight || item.category}</p>
         </div>
       </div>
       <div className="flex items-center gap-8">
