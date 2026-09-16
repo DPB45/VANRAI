@@ -95,14 +95,17 @@ const getProductById = asyncHandler(async (req, res) => {
 
 // @desc    Create a product (Admin)
 const createProduct = asyncHandler(async (req, res) => {
+  const { name, price, description, category, imageUrl, inStock, weight } = req.body;
+
   const product = new Product({
-    name: 'Sample Name',
-    price: 0,
+    name: name || 'Sample Name',
+    price: price ?? 0,
     user: req.user._id,
-    imageUrl: '/images/placeholder.jpg',
-    category: 'Sample Category',
-    description: 'Sample description',
-    inStock: true,
+    imageUrl: imageUrl || '/images/placeholder.jpg',
+    category: category || 'Sample Category',
+    description: description || 'Sample description',
+    inStock: inStock ?? true,
+    weight: weight || '',
     rating: 0,
     numReviews: 0,
   });
@@ -112,7 +115,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
 // @desc    Update a product (Admin)
 const updateProduct = asyncHandler(async (req, res) => {
-  const { name, price, description, category, imageUrl, inStock } = req.body;
+  const { name, price, description, category, imageUrl, inStock, weight } = req.body;
   const product = await Product.findById(req.params.id);
 
   if (product) {
@@ -122,6 +125,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     product.category = category || product.category;
     product.imageUrl = imageUrl || product.imageUrl;
     product.inStock = inStock ?? product.inStock;
+    product.weight = weight ?? product.weight;
 
     const updatedProduct = await product.save();
     res.json(updatedProduct);

@@ -14,6 +14,7 @@ const ProductEdit = () => {
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('Masalas');
     const [inStock, setInStock] = useState(true);
+    const [weight, setWeight] = useState('');
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -30,6 +31,7 @@ const ProductEdit = () => {
                 setDescription(data.description);
                 setCategory(data.category);
                 setInStock(data.inStock);
+                setWeight(data.weight || '');
             } catch (err) {
                 setError('Failed to fetch product details.');
             }
@@ -50,6 +52,7 @@ const ProductEdit = () => {
             category,
             imageUrl,
             inStock,
+            weight,
         };
 
         try {
@@ -115,6 +118,10 @@ const ProductEdit = () => {
                             <option value="Spices">Spices</option>
                             <option value="Herbs">Herbs</option>
                         </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Weight (e.g. 100g, 250g, 1kg)</label>
+                        <input type="text" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="100g" className="w-full border border-gray-300 rounded-md p-2 focus:ring-red-500" />
                     </div>
                 </div>
 

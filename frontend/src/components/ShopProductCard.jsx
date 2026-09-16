@@ -30,10 +30,6 @@ const ShopProductCard = ({ product }) => {
     // page itself.
     const isWishlisted = isInWishlist(product._id);
 
-    // Placeholder weights (remains the same)
-    const productWeights = { /* ... */ };
-    const weight = productWeights[product.name] || '100g';
-
     // --- Wishlist Logic ---
     const toggleWishlist = async () => {
         if (!userInfo) {
@@ -95,7 +91,7 @@ const ShopProductCard = ({ product }) => {
                 />
                 <div className="p-4">
                     <h3 className="text-lg font-semibold text-gray-800 mb-1">{product.name}</h3>
-                    <p className="text-sm text-gray-500 mb-2">{weight}</p>
+                    {product.weight && <p className="text-sm text-gray-500 mb-2">{product.weight}</p>}
                     <div className="flex justify-between items-center">
                         <p className="text-xl font-bold text-red-600">₹{product.price.toFixed(2)}</p>
                         <div className="flex items-center">

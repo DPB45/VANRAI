@@ -35,8 +35,6 @@ const Recipes = () => {
     } else if (activeCategory === 'Sutra Delights') {
       // Filter logic remains the same
       filtered = recipeData.filter(p => p.tags.includes('Curry') || p.tags.includes('Dinner'));
-    } else if (activeCategory === 'Sweet Treats') {
-      filtered = recipeData.filter(p => p.tags.includes('Sweet'));
     } else if (activeCategory === 'Quick Meals') {
       filtered = recipeData.filter(p => p.tags.includes('Quick Meal'));
     } else if (activeCategory === 'Healthy Choices') {
@@ -93,7 +91,6 @@ const Recipes = () => {
             <FilterTab title="All Recipes" activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
             {/* --- The "Video Guides" FilterTab is removed from here --- */}
             <FilterTab title="Sutra Delights" activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
-            <FilterTab title="Sweet Treats" activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
             <FilterTab title="Quick Meals" activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
             <FilterTab title="Healthy Choices" activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
           </div>

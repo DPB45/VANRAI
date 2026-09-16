@@ -36,6 +36,11 @@ const productSchema = new mongoose.Schema({
   category: { type: String, required: true },
   inStock: { type: Boolean, required: true, default: true },
 
+  // Net weight/size as shown to customers (e.g. "100g", "250g", "1kg").
+  // Optional: older/seeded products may not have this set yet, in which
+  // case the frontend simply omits the line rather than guessing.
+  weight: { type: String, required: false, default: '' },
+
   // --- THE FIX IS HERE ---
   user: {
       type: mongoose.Schema.Types.ObjectId,
