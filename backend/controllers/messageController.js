@@ -58,7 +58,7 @@ const createMessage = asyncHandler(async (req, res) => {
     });
 
     if (emailSent) {
-      console.log(' Contact form submitted and email sent to site owner.');
+      console.log('📬 Contact form submitted and email sent to site owner.');
     } else {
       console.error(
         `⚠️  Contact form message ${newMessage._id} was saved, but the site-owner notification email FAILED to send. Check it manually.`
@@ -77,4 +77,47 @@ const createMessage = asyncHandler(async (req, res) => {
   }
 });
 
-export { createMessage };
+// @desc    Get all contact-form messages, newest first (Admin inbox)
+// @route   GET /api/messages
+// @access  Private/Admin
+const getMessages = asyncHandler(async (req, res) => {
+  const messages = await Message.find({}).sort({ createdAt: -1 });
+  res.json(messages);
+});
+
+// @desc    Mark a message as read/unread (Admin)
+// @route   PUT /api/messages/:id/read
+// @access  Private/Admin
+const markMessageRead = asyncHandler(async (req, res) => {
+  const message = await Message.findById(req.params.id);
+
+  if (!message) {
+    res.status(404);
+    throw new Error('Message not found');
+  }
+
+  // Body can optionally force a specific state (e.g. "mark all as read"
+  // from the list); otherwise this just flips whatever it currently is,
+  // which is what a single click on one row should do.
+  message.isRead = typeof req.body.isRead === 'boolean' ? req.body.isRead : !message.isRead;
+  await message.save();
+
+  res.json(message);
+});
+
+// @desc    Delete a message (Admin)
+// @route   DELETE /api/messages/:id
+// @access  Private/Admin
+const deleteMessage = asyncHandler(async (req, res) => {
+  const message = await Message.findById(req.params.id);
+
+  if (!message) {
+    res.status(404);
+    throw new Error('Message not found');
+  }
+
+  await Message.deleteOne({ _id: message._id });
+  res.json({ message: 'Message deleted' });
+});
+
+export { createMessage, getMessages, markMessageRead, deleteMessage };

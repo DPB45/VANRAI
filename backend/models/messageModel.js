@@ -21,6 +21,12 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide a message'],
   },
+  // Lets the admin inbox distinguish new messages from ones already looked
+  // at, and show an unread count. Defaults to unread on creation.
+  isRead: {
+    type: Boolean,
+    default: false,
+  },
 }, {
   timestamps: true,
 });

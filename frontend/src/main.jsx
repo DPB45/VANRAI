@@ -42,6 +42,7 @@ import OrderList from './pages/admin/OrderList.jsx';
 import ProductList from './pages/admin/ProductList.jsx';
 import ProductEdit from './pages/admin/ProductEdit.jsx';
 import Analytics from './pages/admin/Analytics.jsx';
+import MessageList from './pages/admin/MessageList.jsx';
 
 import { CartProvider } from './context/CartContext.jsx';
 import { UserProvider } from './context/UserContext.jsx';
@@ -83,6 +84,7 @@ const router = createBrowserRouter([
           { path: 'productlist', element: <ProductList /> },
           { path: 'product/:id/edit', element: <ProductEdit /> },
           { path: 'analytics', element: <Analytics /> },
+          { path: 'messages', element: <MessageList /> },
         ],
       },
     ],

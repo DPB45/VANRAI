@@ -6,7 +6,8 @@ import {
   UsersIcon,
   ShoppingBagIcon,
   TagIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 
 // Reusable Admin Card Component
@@ -81,6 +82,15 @@ const AdminDashboard = () => {
           icon={ChartBarIcon}
           link="/admin/analytics"
           colorClass="border-purple-500"
+        />
+
+        {/* Messages */}
+        <AdminCard
+          title="Messages"
+          description="View messages submitted via Contact Us."
+          icon={EnvelopeIcon}
+          link="/admin/messages"
+          colorClass="border-pink-500"
         />
 
       </div>
