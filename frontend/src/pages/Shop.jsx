@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FiltersSidebar from '../components/FiltersSidebar';
 import ShopProductCard from '../components/ShopProductCard';
+import SearchBar from '../components/SearchBar';
 import { Squares2X2Icon, Bars3Icon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 
 // Helper function to extract search params from URL
@@ -167,6 +168,14 @@ const Shop = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Search — lives only here on the Shop page now, not in the global
+          header. `key={keyword}` remounts it (re-applying initialKeyword)
+          whenever the URL's keyword changes from elsewhere, e.g. clearing
+          filters or navigating back, so the box never goes stale. */}
+      <div className="mb-6 max-w-md">
+        <SearchBar key={keyword} initialKeyword={keyword} />
+      </div>
+
       <div className="flex flex-col lg:flex-row">
 
         {/* 1. Filters Sidebar */}

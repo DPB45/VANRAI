@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
-const SearchBar = () => {
-    const [keyword, setKeyword] = useState('');
+// `initialKeyword` lets a page that already knows the current search term
+// (e.g. Shop reading it from the URL) pre-fill the input, so the box
+// reflects what's actually being shown instead of always starting empty.
+const SearchBar = ({ initialKeyword = '' }) => {
+    const [keyword, setKeyword] = useState(initialKeyword);
     const navigate = useNavigate();
 
     const searchHandler = (e) => {
@@ -18,7 +21,7 @@ const SearchBar = () => {
     };
 
     return (
-        <form onSubmit={searchHandler} className="relative w-full max-w-sm mr-4">
+        <form onSubmit={searchHandler} className="relative w-full max-w-sm">
             <input
                 type="search"
                 name="keyword"

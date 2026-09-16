@@ -4,7 +4,6 @@ import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
-import SearchBar from './SearchBar';
 import {
   ShoppingCartIcon,
   UserIcon,
@@ -54,7 +53,6 @@ const Header = () => {
           {/* Right Side Actions */}
           <div className="flex items-center space-x-3 md:space-x-4">
 
-            <div className="hidden md:block"><SearchBar /></div>
             <div className="hidden md:block"><LanguageSwitcher /></div>
 
             {/* --- 2. WISHLIST ICON --- */}
@@ -103,7 +101,6 @@ const Header = () => {
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="lg:hidden mt-4 pb-4 border-t border-gray-100 animate-fade-in-down">
-            <div className="mt-4 mb-4"><SearchBar /></div>
             <nav className="flex flex-col space-y-3">
               <Link to="/" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('Home')}</Link>
               <Link to="/shop" className="text-gray-700 hover:text-red-600 font-medium py-2 border-b border-gray-50" onClick={() => setIsMobileMenuOpen(false)}>{t('Shop')}</Link>
