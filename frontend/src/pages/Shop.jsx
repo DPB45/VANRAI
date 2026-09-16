@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import FiltersSidebar from '../components/FiltersSidebar';
 import ShopProductCard from '../components/ShopProductCard';
 import { Squares2X2Icon, Bars3Icon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
@@ -10,24 +10,30 @@ const useQuery = () => {
     return new URLSearchParams(useLocation().search);
 };
 
+// Maps the UI's sort labels to the backend's `sortBy` query values.
+const SORT_BY_MAP = {
+    'Popularity': 'popularity',
+    'Title (A-Z)': 'title',
+    'Price (Low to High)': 'priceAsc',
+    'Price (High to Low)': 'priceDesc',
+};
+
+// Maps the sidebar's category keys to the values stored on each product.
+const CATEGORY_MAP = { spices: 'Spices', masalas: 'Masalas', herbs: 'Herbs' };
+
 // Pagination component
-const Pagination = ({ page, pages, keyword = '' }) => {
+const Pagination = ({ page, pages, buildPageUrl }) => {
     const navigate = useNavigate();
 
     if (pages <= 1) return null;
 
     const items = [...Array(pages).keys()];
 
-    const paginateHandler = (pageNumber) => {
-        // Preserves search keyword when navigating pages
-        navigate(`/shop?keyword=${keyword}&pageNumber=${pageNumber}`);
-    };
-
     return (
         <div className="flex justify-center items-center mt-12">
             <nav className="flex items-center gap-2">
                 <button
-                    onClick={() => paginateHandler(page - 1)}
+                    onClick={() => navigate(buildPageUrl(page - 1))}
                     disabled={page === 1}
                     className="p-2 text-gray-400 hover:text-gray-700 disabled:opacity-50"
                 >
@@ -37,7 +43,7 @@ const Pagination = ({ page, pages, keyword = '' }) => {
                 {items.map((x) => (
                     <button
                         key={x + 1}
-                        onClick={() => paginateHandler(x + 1)}
+                        onClick={() => navigate(buildPageUrl(x + 1))}
                         className={`w-8 h-8 rounded-md font-medium transition-colors ${
                             x + 1 === page
                                 ? 'text-white bg-red-600'
@@ -49,7 +55,7 @@ const Pagination = ({ page, pages, keyword = '' }) => {
                 ))}
 
                 <button
-                    onClick={() => paginateHandler(page + 1)}
+                    onClick={() => navigate(buildPageUrl(page + 1))}
                     disabled={page === pages}
                     className="p-2 text-gray-400 hover:text-gray-700 disabled:opacity-50"
                 >
@@ -63,17 +69,20 @@ const Pagination = ({ page, pages, keyword = '' }) => {
 
 const Shop = () => {
   const query = useQuery();
+  const navigate = useNavigate();
   const keyword = query.get('keyword') || '';
-  const pageNumber = query.get('pageNumber') || 1; // Default to page 1
+  const pageNumber = Number(query.get('pageNumber')) || 1;
 
   const [products, setProducts] = useState([]);
-  const [pages, setPages] = useState(1); // Total number of pages
-  const [page, setPage] = useState(1); // Current page number
+  const [pages, setPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // State for advanced filtering (applied locally after server fetch)
+  // Filters are sent straight to the backend now, so they're applied across
+  // the WHOLE catalog instead of only the 8 products on the current page.
   const [currentFilters, setCurrentFilters] = useState({
       categories: [],
       maxPrice: 500,
@@ -81,20 +90,43 @@ const Shop = () => {
       sortBy: 'Popularity'
   });
 
-  // --- Fetch Products with Search & Pagination ---
+  // Builds a /shop URL that preserves the keyword, only changing the page
+  // number. Used by the Pagination component.
+  const buildPageUrl = (pageNum) => `/shop?keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNum}`;
+
+  // --- Fetch Products from the server with search, filters, sort & pagination ---
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // API call includes keyword and page number
-        const url = `/api/products?keyword=${keyword}&pageNumber=${pageNumber}`;
-        const { data } = await axios.get(url);
+        setError(null);
 
-        // --- CORE FIX: Destructure the paged response ---
+        const params = new URLSearchParams();
+        params.set('keyword', keyword);
+        params.set('pageNumber', pageNumber);
+
+        const activeCategories = currentFilters.categories
+            .map((key) => CATEGORY_MAP[key])
+            .filter(Boolean);
+        if (activeCategories.length > 0) {
+            params.set('category', activeCategories.join(','));
+        }
+
+        params.set('maxPrice', currentFilters.maxPrice);
+
+        const { inStock, outOfStock } = currentFilters.availability;
+        if (inStock && !outOfStock) params.set('inStock', 'true');
+        else if (!inStock && outOfStock) params.set('inStock', 'false');
+        // If both or neither are checked, don't filter by stock at all.
+
+        params.set('sortBy', SORT_BY_MAP[currentFilters.sortBy] || 'popularity');
+
+        const { data } = await axios.get(`/api/products?${params.toString()}`);
+
         setProducts(data.products);
         setPages(data.pages);
         setPage(data.page);
-        // ------------------------------------------------
+        setTotalProducts(data.totalProducts);
 
       } catch (err) {
         setError('Failed to load products.');
@@ -105,52 +137,24 @@ const Shop = () => {
     };
 
     fetchProducts();
-  }, [keyword, pageNumber]); // Re-fetch whenever search or page changes
+  }, [keyword, pageNumber, currentFilters]);
 
-  // Handler to update filters state from sidebar
+  // Handler to update filters state from sidebar. Also resets pagination
+  // back to page 1, since the previous page number may no longer make sense
+  // once the result set changes.
+  //
+  // IMPORTANT: this is memoized with useCallback, keyed only on the
+  // primitive `keyword`/`pageNumber` values (which only change when the URL
+  // actually changes). FiltersSidebar re-runs its own sync effect whenever
+  // this function's identity changes, so if it were re-created on every
+  // render (e.g. every time loading/products state updates) it would
+  // trigger an infinite fetch loop.
   const handleFilterChange = useCallback((newFilters) => {
-    setCurrentFilters(prev => ({ ...prev, ...newFilters }));
-  }, []);
-
-  // --- LOCAL FILTERING AND SORTING LOGIC (Applied to the current page results) ---
-  const filteredAndSortedProducts = useMemo(() => {
-    let tempProducts = [...products];
-    const filters = currentFilters;
-
-    // NOTE: This filtering/sorting is applied locally to the current page's batch of 8 products.
-
-    // 1. Filter by Price
-    tempProducts = tempProducts.filter((product) => product.price <= filters.maxPrice);
-
-    // 2. Filter by Category
-    if (filters.categories.length > 0) {
-        const categoryMap = { spices: 'Spices', masalas: 'Masalas', herbs: 'Herbs' };
-        const activeCategories = filters.categories.map(key => categoryMap[key]).filter(Boolean);
-
-        tempProducts = tempProducts.filter((product) =>
-            activeCategories.includes(product.category)
-        );
+    setCurrentFilters((prev) => ({ ...prev, ...newFilters }));
+    if (pageNumber !== 1) {
+      navigate(`/shop?keyword=${encodeURIComponent(keyword)}&pageNumber=1`);
     }
-
-    // 3. Filter by Availability
-    if (filters.availability.inStock && !filters.availability.outOfStock) {
-        tempProducts = tempProducts.filter((product) => product.inStock === true);
-    } else if (!filters.availability.inStock && filters.availability.outOfStock) {
-        tempProducts = tempProducts.filter((product) => product.inStock === false);
-    }
-
-    // 4. Sorting (Local sort on the current page's results)
-    if (filters.sortBy === 'Price (Low to High)') {
-        tempProducts.sort((a, b) => a.price - b.price);
-    } else if (filters.sortBy === 'Price (High to Low)') {
-        tempProducts.sort((a, b) => b.price - a.price);
-    } else if (filters.sortBy === 'Title (A-Z)') {
-        tempProducts.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    return tempProducts;
-  }, [products, currentFilters]);
-
+  }, [keyword, pageNumber, navigate]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -164,7 +168,7 @@ const Shop = () => {
           {/* Top Bar (Sort, View) */}
           <div className="flex justify-between items-center mb-6">
             <p className="text-gray-600">
-              {loading ? 'Loading...' : `${filteredAndSortedProducts.length} Products Found ${keyword ? `for "${keyword}"` : ''}`}
+              {loading ? 'Loading...' : `${totalProducts} Products Found ${keyword ? `for "${keyword}"` : ''}`}
             </p>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -203,18 +207,18 @@ const Shop = () => {
             </div>
           ) : error ? (
             <p className="text-center text-red-500">{error}</p>
-          ) : filteredAndSortedProducts.length === 0 ? (
+          ) : products.length === 0 ? (
             <p className="text-center text-gray-500">No products found matching your search and filters.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {filteredAndSortedProducts.map((product) => (
+              {products.map((product) => (
                 <ShopProductCard key={product._id} product={product} />
               ))}
             </div>
           )}
 
           {/* Pagination Component */}
-          <Pagination page={page} pages={pages} keyword={keyword} />
+          <Pagination page={page} pages={pages} buildPageUrl={buildPageUrl} />
         </main>
       </div>
     </div>

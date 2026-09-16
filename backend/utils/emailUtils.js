@@ -14,8 +14,10 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendEmail = async ({ to, subject, text, html }) => {
-  // IMPORTANT: This email MUST be the one you verified in Brevo
-  const senderEmail = "dhairya4507@gmail.com";
+  // IMPORTANT: This email MUST be the one you verified in Brevo.
+  // Set SENDER_EMAIL in your .env; falls back to the previous hardcoded
+  // address only so existing deployments keep working without a config change.
+  const senderEmail = process.env.SENDER_EMAIL || "dhairya4507@gmail.com";
 
   const mailOptions = {
     from: `"Vanrai Spices" <${senderEmail}>`,

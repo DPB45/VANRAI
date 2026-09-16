@@ -149,13 +149,6 @@ const Login = () => {
         }
     };
 
-    const handleSimulateLogin = () => {
-        const simData = { _id: 'simulated_id', name: 'Simulated User', email: 'simulated@example.com', token: 'fake_token'};
-        login(simData);
-        localStorage.setItem('userInfo', JSON.stringify(simData));
-        navigate('/account/dashboard');
-    };
-
     return (
         <div className="flex items-center justify-center py-8 md:py-16 bg-gray-50 min-h-[calc(100vh-160px)] px-4">
             <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-xl shadow-lg border border-gray-100">
@@ -324,17 +317,6 @@ const Login = () => {
                         </div>
                     )}
                 </form>
-
-                {!show2FAInput && (
-                    <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-                         <button
-                            type="button" onClick={handleSimulateLogin}
-                            className="text-xs text-gray-400 hover:text-gray-600 hover:underline transition-colors"
-                        >
-                            Simulate Login (Dev Mode)
-                        </button>
-                    </div>
-                )}
             </div>
         </div>
     );

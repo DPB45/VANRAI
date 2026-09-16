@@ -43,7 +43,7 @@ const Profile = () => {
 
       // Send PUT request to update profile (excluding password)
       const { data } = await axios.put(
-        'http://localhost:5001/api/users/profile',
+        '/api/users/profile',
         { name, email }, // Send updated name and email
         config
       );

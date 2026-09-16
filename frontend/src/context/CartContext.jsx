@@ -95,7 +95,9 @@ export const CartProvider = ({ children }) => {
     subtotal,
     shipping,
     total,
-    itemCount: cartItems.length
+    // Total number of units in the cart (not just distinct products), so the
+    // header badge matches what's actually in the cart.
+    itemCount: cartItems.reduce((acc, item) => acc + item.quantity, 0),
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

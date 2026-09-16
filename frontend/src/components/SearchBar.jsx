@@ -10,7 +10,7 @@ const SearchBar = () => {
         e.preventDefault();
         if (keyword.trim()) {
             // Redirect to /shop with the search term as a query parameter
-            navigate(`/shop?keyword=${keyword.trim()}&pageNumber=1`);
+            navigate(`/shop?keyword=${encodeURIComponent(keyword.trim())}&pageNumber=1`);
         } else {
             // If empty, redirect to base shop page
             navigate(`/shop`);

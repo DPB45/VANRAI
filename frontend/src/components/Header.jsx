@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Header = () => {
-  const { itemCount, clearCart } = useCart();
+  const { itemCount } = useCart();
   const { userInfo, logout } = useUser();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -23,7 +23,9 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const logoutHandler = () => {
-    clearCart();
+    // NOTE: we intentionally do NOT clear the cart here. Logging out
+    // shouldn't destroy items a guest or user has added — the cart is
+    // device-local and should persist across login/logout on the same device.
     logout();
     localStorage.removeItem('userInfo');
     navigate('/login');

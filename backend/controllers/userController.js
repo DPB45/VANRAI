@@ -198,39 +198,58 @@ const toggleTwoFactor = asyncHandler(async (req, res) => {
 // --- PASSWORD RESET ---
 
 // @desc    Request Password Reset
+// @route   POST /api/users/forgotpassword
+// @access  Public
 const requestPasswordReset = asyncHandler(async (req, res) => {
   const { email } = req.body;
-
-  // ... validation ...
 
   const user = await User.findOne({ email });
 
   if (user) {
+    // Generate a raw token to email to the user...
     const resetToken = generateResetToken();
-    // Use your Vercel frontend URL here
-    const resetUrl = `https://vanrai.vercel.app/resetpassword/${resetToken}`;
+
+    // ...but only ever store a HASH of it in the database. This way,
+    // even if the database is ever exposed, the reset tokens can't be
+    // used (same principle as never storing plaintext passwords).
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000; // 30 minutes
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://vanrai.vercel.app'}/resetpassword/${resetToken}`;
 
     // Send Email and CHECK SUCCESS
     const emailSent = await sendEmail({
         to: user.email,
         subject: `Password Reset Request`,
-        text: `Reset link: ${resetUrl}`,
-        html: `<p>Click here to reset: <a href="${resetUrl}">Reset Password</a></p>`,
+        text: `Reset link: ${resetUrl}. This link expires in 30 minutes.`,
+        html: `<p>Click here to reset your password: <a href="${resetUrl}">Reset Password</a></p><p>This link expires in 30 minutes. If you didn't request this, you can safely ignore this email.</p>`,
     });
 
-    // ONLY send success response if email was actually sent
-    if (emailSent) {
-        console.log(`🔑 Password reset link sent to ${user.email}.`);
-        res.json({ message: 'Password reset link sent successfully.' });
-    } else {
-        // If email failed, send 500 error so frontend knows
+    // If the email failed to send, roll back the token so it can't be
+    // used later without the user actually receiving the link.
+    if (!emailSent) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+        await user.save({ validateBeforeSave: false });
+
         res.status(500);
         throw new Error('Email server error. Please try again later.');
     }
-  } else {
-    res.json({ message: 'If a user exists, a password reset link has been sent.' });
+
+    console.log(`🔑 Password reset link sent to ${user.email}.`);
   }
+
+  // Always return the same generic message, whether or not the user
+  // exists, so this endpoint can't be used to enumerate registered emails.
+  res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
 });
+
 // @desc    Reset password
 // @route   PUT /api/users/resetpassword/:token
 // @access  Public
@@ -238,13 +257,26 @@ const resetPassword = asyncHandler(async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
 
-  // In a real app, verify token against DB. For simulation:
-  if (token === 'valid_reset_token') {
-    res.json({ message: 'Password reset successful. Please log in.' });
-  } else {
+  // Hash the incoming raw token the same way we hashed it at request time,
+  // then look up a user with a matching, still-valid token.
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
     res.status(400);
-    throw new Error('Invalid or expired reset token.');
+    throw new Error('Invalid or expired reset token. Please request a new link.');
   }
+
+  user.password = password; // hashed automatically by the pre('save') hook
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+
+  res.json({ message: 'Password reset successful. Please log in.' });
 });
 
 // --- ADMIN ---
@@ -299,18 +331,145 @@ const getWishlist = asyncHandler(async (req, res) => {
   }
 });
 
-// delete user
+// @desc    Delete a user (Admin)
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
-  if (user) {
-    await User.deleteOne({ _id: user._id });
-    res.json({ message: 'User removed' });
-  } else {
+  if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
+
+  if (user._id.toString() === req.user._id.toString()) {
+    res.status(400);
+    throw new Error('You cannot delete your own account.');
+  }
+
+  if (user.isAdmin) {
+    res.status(400);
+    throw new Error('Admin accounts cannot be deleted from here.');
+  }
+
+  await User.deleteOne({ _id: user._id });
+  res.json({ message: 'User removed' });
 });
+
+// --- ADDRESSES ---
+
+// @desc    Get logged-in user's saved addresses
+// @route   GET /api/users/addresses
+// @access  Private
+const getAddresses = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  res.json(user.addresses);
+});
+
+// @desc    Add a new address
+// @route   POST /api/users/addresses
+// @access  Private
+const addAddress = asyncHandler(async (req, res) => {
+  const { fullName, addressLine1, addressLine2, city, state, postalCode, country, isDefault } = req.body;
+
+  if (!fullName || !addressLine1 || !city || !state || !postalCode) {
+    res.status(400);
+    throw new Error('Please fill in all required address fields.');
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // If this new address is marked default, unset default on the others.
+  if (isDefault) {
+    user.addresses.forEach((addr) => { addr.isDefault = false; });
+  }
+
+  user.addresses.push({
+    fullName,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    postalCode,
+    country: country || 'India',
+    isDefault: !!isDefault || user.addresses.length === 0, // first address defaults to true
+  });
+
+  await user.save();
+  res.status(201).json(user.addresses);
+});
+
+// @desc    Update an existing address
+// @route   PUT /api/users/addresses/:addressId
+// @access  Private
+const updateAddress = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const address = user.addresses.id(req.params.addressId);
+  if (!address) {
+    res.status(404);
+    throw new Error('Address not found');
+  }
+
+  const { fullName, addressLine1, addressLine2, city, state, postalCode, country, isDefault } = req.body;
+
+  address.fullName = fullName || address.fullName;
+  address.addressLine1 = addressLine1 || address.addressLine1;
+  address.addressLine2 = addressLine2 ?? address.addressLine2;
+  address.city = city || address.city;
+  address.state = state || address.state;
+  address.postalCode = postalCode || address.postalCode;
+  address.country = country || address.country;
+
+  if (isDefault) {
+    user.addresses.forEach((addr) => { addr.isDefault = false; });
+    address.isDefault = true;
+  }
+
+  await user.save();
+  res.json(user.addresses);
+});
+
+// @desc    Delete an address
+// @route   DELETE /api/users/addresses/:addressId
+// @access  Private
+const deleteAddress = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const address = user.addresses.id(req.params.addressId);
+  if (!address) {
+    res.status(404);
+    throw new Error('Address not found');
+  }
+
+  const wasDefault = address.isDefault;
+  address.deleteOne();
+
+  // If we removed the default address, promote another one (if any).
+  if (wasDefault && user.addresses.length > 0) {
+    user.addresses[0].isDefault = true;
+  }
+
+  await user.save();
+  res.json(user.addresses);
+});
+
 export {
     registerUser,
     authUser,
@@ -322,5 +481,9 @@ export {
     getWishlist,
     verifyTwoFactorLogin,
     toggleTwoFactor,
-    deleteUser
+    deleteUser,
+    getAddresses,
+    addAddress,
+    updateAddress,
+    deleteAddress,
 };

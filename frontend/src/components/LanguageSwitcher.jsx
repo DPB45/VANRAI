@@ -7,7 +7,10 @@ const LanguageSwitcher = () => {
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
   };
-  const currentLang = i18n.language;
+  // The browser language detector can report a full locale like "en-US".
+  // Normalize down to the base language code so it always matches one of
+  // the <option> values below instead of showing a blank select.
+  const currentLang = (i18n.language || 'en').split('-')[0];
 
   return (
     <div className="relative inline-flex text-gray-700">

@@ -50,7 +50,7 @@ i18n
     },
     fallbackLng: 'en',
     supportedLngs: ['en', 'hi'],
-    debug: true, // Helpful for debugging
+    debug: false,
     interpolation: {
       escapeValue: false,
     },

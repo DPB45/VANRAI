@@ -3,20 +3,80 @@ import Order from '../models/orderModel.js';
 import validator from 'validator';
 import sendEmail from '../utils/emailUtils.js';
 import User from '../models/userModel.js';
+import Product from '../models/productModel.js';
+import mongoose from 'mongoose';
 
-// Create new order (unchanged)
+// Flat shipping fee. Kept server-side so it can't be tampered with by the
+// client, and defined once here as the single source of truth.
+const SHIPPING_PRICE = 50.0;
+
+// Create new order.
+//
+// SECURITY NOTE: prices are NEVER trusted from the client. The client only
+// tells us which product IDs and quantities it wants; we look up the real
+// price for each product in the database and compute all totals ourselves.
+// This prevents a user from tampering with their cart in localStorage (or
+// calling this endpoint directly) to check out at an arbitrary price.
 const addOrderItems = asyncHandler(async (req, res) => {
-  const { orderItems, shippingAddress, paymentMethod, itemsPrice, shippingPrice, totalPrice } = req.body;
+  const { orderItems, shippingAddress, paymentMethod } = req.body;
 
   if (!orderItems || orderItems.length === 0) { res.status(400); throw new Error('No order items'); }
   if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.addressLine1 || !shippingAddress.city || !shippingAddress.postalCode) { res.status(400); throw new Error('Please fill in all required shipping address fields.'); }
   if (!validator.isNumeric(shippingAddress.postalCode)) { res.status(400); throw new Error('Postal Code must be numeric.'); }
 
+  // Look up every product referenced in the cart in one query. Filter out
+  // anything that isn't a well-formed ObjectId first so a malformed/tampered
+  // ID can't throw an unhandled CastError.
+  const productIds = orderItems
+    .map((item) => item._id)
+    .filter((id) => mongoose.isValidObjectId(id));
+  const products = await Product.find({ _id: { $in: productIds } });
+  const productMap = new Map(products.map((p) => [p._id.toString(), p]));
+
+  const verifiedOrderItems = [];
+  let itemsPrice = 0;
+
+  for (const item of orderItems) {
+    const product = productMap.get(String(item._id));
+
+    if (!product) {
+      res.status(400);
+      throw new Error(`One of the items in your cart is no longer available.`);
+    }
+
+    const qty = Number(item.quantity);
+    if (!Number.isInteger(qty) || qty < 1) {
+      res.status(400);
+      throw new Error(`Invalid quantity for ${product.name}.`);
+    }
+
+    if (!product.inStock) {
+      res.status(400);
+      throw new Error(`${product.name} is currently out of stock.`);
+    }
+
+    verifiedOrderItems.push({
+      name: product.name,
+      qty,
+      image: product.imageUrl,
+      price: product.price, // <-- real price from the DB, not the client
+      product: product._id.toString(),
+    });
+
+    itemsPrice += product.price * qty;
+  }
+
+  const shippingPrice = SHIPPING_PRICE;
+  const totalPrice = itemsPrice + shippingPrice;
+
   const order = new Order({
-    orderItems: orderItems.map((item) => ({
-      name: item.name, qty: item.quantity, image: item.imageUrl, price: item.price, product: item._id,
-    })),
-    user: req.user._id, shippingAddress, paymentMethod, itemsPrice, shippingPrice, totalPrice,
+    orderItems: verifiedOrderItems,
+    user: req.user._id,
+    shippingAddress,
+    paymentMethod,
+    itemsPrice,
+    shippingPrice,
+    totalPrice,
   });
 
   const createdOrder = await order.save();
@@ -96,6 +156,14 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     if (status === 'Delivered') {
         order.isDelivered = true;
         order.deliveredAt = Date.now();
+
+        // This is a Cash-on-Delivery store, so payment is collected at the
+        // moment of delivery. Mark the order paid here too instead of
+        // leaving isPaid permanently false for every order.
+        if (!order.isPaid) {
+            order.isPaid = true;
+            order.paidAt = Date.now();
+        }
 
         // Email Trigger: Delivered
         const user = await User.findById(order.user);

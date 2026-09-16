@@ -52,7 +52,7 @@ const Home = () => {
     },
     {
       icon: SparklesIcon,
-      title: 'Farm-Lost Ingredients',
+      title: 'Farm-Fresh Ingredients',
       description: 'Sourced directly for superior quality and taste.',
     },
     {

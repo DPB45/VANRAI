@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline'; // Outline icon
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';   // Solid icon
@@ -22,8 +22,13 @@ const renderRating = (rating) => {
 };
 
 const ShopProductCard = ({ product }) => {
-    const { userInfo } = useUser();
-    const [isWishlisted, setIsWishlisted] = useState(false);
+    const { userInfo, isInWishlist, setWishlistMembership } = useUser();
+
+    // Reflects the user's REAL wishlist (synced once at login via
+    // UserContext) instead of always starting as "not wishlisted", so
+    // hearts render correctly on first paint — including on the Wishlist
+    // page itself.
+    const isWishlisted = isInWishlist(product._id);
 
     // Placeholder weights (remains the same)
     const productWeights = { /* ... */ };
@@ -47,7 +52,7 @@ const ShopProductCard = ({ product }) => {
                 config
             );
 
-            setIsWishlisted(data.isAdded);
+            setWishlistMembership(product._id, data.isAdded);
             toast.success(data.message, {
                 icon: data.isAdded ? '❤️' : '💔',
             });
@@ -58,10 +63,6 @@ const ShopProductCard = ({ product }) => {
         }
     };
     // -----------------------
-
-    // --- Initial Check (Simplified: Assumes data comes back with isWishlisted flag, or we fetch the list globally) ---
-    // For a simple functional demo, we'll assume the status is managed by the toggle only.
-    // A robust app would check the user's initial wishlist on app load.
 
     return (
         <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:shadow-xl relative">

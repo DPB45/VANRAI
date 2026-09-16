@@ -19,17 +19,65 @@ export const seedProducts = asyncHandler(async () => {
 
 // --- PRODUCT CRUD ---
 
-// @desc    Fetch all products (Search & Pagination)
+// @desc    Fetch all products (Search, Filtering, Sorting & Pagination)
 const getProducts = asyncHandler(async (req, res) => {
-    const pageSize = 8;
+    // Allow callers (e.g. the admin product list) to ask for a larger page,
+    // capped so the endpoint can't be abused to pull the entire catalog in
+    // one uncapped request.
+    const requestedPageSize = Number(req.query.pageSize) || 8;
+    const pageSize = Math.min(Math.max(requestedPageSize, 1), 200);
     const page = Number(req.query.pageNumber) || 1;
-    const keyword = req.query.keyword ? { name: { $regex: req.query.keyword, $options: 'i' } } : {};
 
-    const count = await Product.countDocuments({ ...keyword });
-    const products = await Product.find({ ...keyword })
+    const filter = {};
+
+    if (req.query.keyword) {
+        filter.name = { $regex: req.query.keyword, $options: 'i' };
+    }
+
+    if (req.query.category) {
+        const categories = req.query.category
+            .split(',')
+            .map((c) => c.trim())
+            .filter(Boolean);
+        if (categories.length > 0) {
+            filter.category = { $in: categories };
+        }
+    }
+
+    if (req.query.maxPrice) {
+        const maxPrice = Number(req.query.maxPrice);
+        if (!Number.isNaN(maxPrice)) {
+            filter.price = { $lte: maxPrice };
+        }
+    }
+
+    if (req.query.inStock === 'true') {
+        filter.inStock = true;
+    } else if (req.query.inStock === 'false') {
+        filter.inStock = false;
+    }
+
+    // Sorting
+    let sort = { rating: -1 }; // Default: "Popularity"
+    switch (req.query.sortBy) {
+        case 'priceAsc':
+            sort = { price: 1 };
+            break;
+        case 'priceDesc':
+            sort = { price: -1 };
+            break;
+        case 'title':
+            sort = { name: 1 };
+            break;
+        default:
+            break;
+    }
+
+    const count = await Product.countDocuments(filter);
+    const products = await Product.find(filter)
         .limit(pageSize)
         .skip(pageSize * (page - 1))
-        .sort({ rating: -1 });
+        .sort(sort);
 
     res.json({ products, page, pages: Math.ceil(count / pageSize), totalProducts: count });
 });

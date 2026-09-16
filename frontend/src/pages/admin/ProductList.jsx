@@ -16,17 +16,11 @@ const ProductList = () => {
   const fetchProducts = async () => {
       try {
         setLoading(true);
-        // REQUEST PAGE 1, BUT ASK FOR A LARGE NUMBER (if backend supports it)
-        // OR we can fetch page 1 and page 2 and combine them.
-        // For now, let's just fetch page 1 and page 2 to ensure we see everything.
-
-        const { data: page1 } = await axios.get(`/api/products?pageNumber=1`, config);
-        const { data: page2 } = await axios.get(`/api/products?pageNumber=2`, config);
-
-        // Combine products from both pages (simple fix for now)
-        const allProducts = [...(page1.products || []), ...(page2.products || [])];
-
-        setProducts(allProducts);
+        // The backend supports an explicit pageSize (capped at 200 server-side),
+        // so the admin list can pull the whole catalog in a single request
+        // instead of only ever showing the first two pages (16 products).
+        const { data } = await axios.get(`/api/products?pageNumber=1&pageSize=200`, config);
+        setProducts(data.products || []);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to fetch products.');
       } finally {

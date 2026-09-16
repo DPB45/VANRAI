@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useUser } from '../context/UserContext';
-import { useCart } from '../context/CartContext'; // <-- 1. Import useCart
 import {
   UserCircleIcon,
   ArchiveBoxIcon,
@@ -34,10 +34,26 @@ const DashboardCard = ({ title, icon: Icon, children, linkTo, isHighlight }) => 
 const AccountDashboard = () => {
   const navigate = useNavigate();
   const { userInfo, logout } = useUser();
-  const { clearCart } = useCart(); // <-- 2. Get clearCart function
+
+  const [orderCount, setOrderCount] = useState(null);
+  const [addressCount, setAddressCount] = useState(null);
+
+  useEffect(() => {
+    if (!userInfo) return;
+
+    const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
+    axios.get('/api/orders/myorders', config)
+      .then(({ data }) => setOrderCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => setOrderCount(null));
+
+    axios.get('/api/users/addresses', config)
+      .then(({ data }) => setAddressCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => setAddressCount(null));
+  }, [userInfo]);
 
   const handleLogout = () => {
-    clearCart(); // <-- 3. Clear the cart here
+    // NOTE: intentionally not clearing the cart on logout — see Header.jsx.
     logout();
     localStorage.removeItem('userInfo');
     navigate('/');
@@ -89,12 +105,18 @@ const AccountDashboard = () => {
 
           <DashboardCard title="Order History" icon={ArchiveBoxIcon} linkTo="/account/orders">
             <p>View your past orders and track current shipments.</p>
-            <p>You have <strong>0</strong> recent orders.</p>
+            <p>
+              You have <strong>{orderCount === null ? '…' : orderCount}</strong>{' '}
+              {orderCount === 1 ? 'order' : 'orders'} on file.
+            </p>
           </DashboardCard>
 
           <DashboardCard title="My Addresses" icon={MapPinIcon} linkTo="/account/addresses">
             <p>Manage your saved shipping and billing addresses.</p>
-            <p>You have <strong>1</strong> saved address.</p>
+            <p>
+              You have <strong>{addressCount === null ? '…' : addressCount}</strong> saved{' '}
+              {addressCount === 1 ? 'address' : 'addresses'}.
+            </p>
           </DashboardCard>
 
           <DashboardCard title="Account Settings" icon={Cog6ToothIcon} linkTo="/account/settings">

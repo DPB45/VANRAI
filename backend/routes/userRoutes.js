@@ -13,7 +13,11 @@ import {
     getWishlist,
     verifyTwoFactorLogin, // <-- Import
     toggleTwoFactor,
-    deleteUser// <-- Import
+    deleteUser,// <-- Import
+    getAddresses,
+    addAddress,
+    updateAddress,
+    deleteAddress,
 } from '../controllers/userController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -92,6 +96,15 @@ router.route('/2fa').put(protect, toggleTwoFactor); // <-- NEW ROUTE
 router.route('/wishlist')
     .put(protect, toggleWishlist)
     .get(protect, getWishlist);
+
+// ADDRESS ROUTES
+router.route('/addresses')
+    .get(protect, getAddresses)
+    .post(protect, addAddress);
+
+router.route('/addresses/:addressId')
+    .put(protect, updateAddress)
+    .delete(protect, deleteAddress);
 
 // Admin Route: Get all users
 router.route('/').get(protect, admin, getUsers);
