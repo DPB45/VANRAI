@@ -285,7 +285,11 @@ const resetPassword = asyncHandler(async (req, res) => {
 // @route   GET /api/users
 // @access  Private/Admin
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({});
+  // NEVER return the password hash to the client, even to an admin — the
+  // admin UI only needs name/email/isAdmin/etc, and shipping hashes over
+  // the network is an unnecessary exposure if the response is ever logged,
+  // cached, or intercepted.
+  const users = await User.find({}).select('-password');
   res.json(users);
 });
 
