@@ -81,7 +81,13 @@ const ShopProductCard = ({ product }) => {
                 </button>
             )}
 
-            <Link to={`/product/${product._id}`} className="block">
+            {!product.inStock && (
+                <span className="absolute top-3 left-3 z-10 text-xs font-semibold text-white bg-gray-800/80 px-2 py-1 rounded-full">
+                    Out of Stock
+                </span>
+            )}
+
+            <Link to={`/product/${product._id}`} className={`block ${!product.inStock ? 'opacity-60' : ''}`}>
                 <img
                     src={product.imageUrl}
                     alt={product.name}

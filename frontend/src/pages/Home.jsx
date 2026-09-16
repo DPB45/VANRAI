@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import Meta from '../components/Meta'; // <-- 1. Import Meta Component
+import NewsletterForm from '../components/NewsletterForm';
 
 // Import icons for "Why Choose Us"
 import {
@@ -226,20 +227,7 @@ const Home = () => {
             Sign up for our newsletter to receive exclusive recipes, new product
             updates, and special offers right in your inbox.
           </p>
-          <form className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto">
-            <input
-              type="email"
-              placeholder="Enter your email address"
-              className="flex-grow px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500"
-              required
-            />
-            <button
-              type="submit"
-              className="bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors duration-300"
-            >
-              Subscribe
-            </button>
-          </form>
+          <NewsletterForm />
         </div>
       </section>
     </div>

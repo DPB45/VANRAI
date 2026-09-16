@@ -26,12 +26,15 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 });
 
-// --- NEW ADMIN MIDDLEWARE ---
+// --- ADMIN MIDDLEWARE ---
 const admin = (req, res, next) => {
   if (req.user && req.user.isAdmin) {
     next();
   } else {
-    res.status(401);
+    // 403, not 401: `protect` already ran and confirmed this is a real,
+    // authenticated user - they're just not authorized for an admin-only
+    // action, which is what 403 Forbidden means.
+    res.status(403);
     throw new Error('Not authorized as an admin');
   }
 };

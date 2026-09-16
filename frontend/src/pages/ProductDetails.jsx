@@ -149,8 +149,16 @@ const ProductDetails = () => {
     };
 
     const handleQuantityChange = (amount) => { setQuantity((prev) => Math.max(1, prev + amount)); };
-    const handleAddToCart = () => { if (product) { addToCart(product, quantity); toast.success(`${quantity} x ${product.name} added to cart!`); } };
-    const handleBuyNow = () => { if (product) { addToCart(product, quantity); navigate('/checkout'); } };
+    const handleAddToCart = () => {
+        if (!product || !product.inStock) return;
+        addToCart(product, quantity);
+        toast.success(`${quantity} x ${product.name} added to cart!`);
+    };
+    const handleBuyNow = () => {
+        if (!product || !product.inStock) return;
+        addToCart(product, quantity);
+        navigate('/checkout');
+    };
 
     if (loading) return <p className="text-center py-20">Loading...</p>;
     if (error) return <p className="text-center py-20 text-red-500">{error}</p>;
@@ -165,16 +173,33 @@ const ProductDetails = () => {
                 <div className="flex flex-col justify-center">
                     <h1 className="text-4xl font-bold text-gray-800 mb-2">{product.name}</h1>
                     <div className="flex items-center mb-4">{renderRating(product.rating)}<span className="text-gray-600 text-sm ml-2">({product.rating})</span></div>
-                    <p className="text-3xl font-bold text-gray-900 mb-4">₹{product.price.toFixed(2)}</p>
+                    <p className="text-3xl font-bold text-gray-900 mb-2">₹{product.price.toFixed(2)}</p>
+                    {!product.inStock && (
+                        <p className="inline-block w-fit mb-4 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
+                            Out of Stock
+                        </p>
+                    )}
                     <p className="text-gray-600 mb-6">{product.description}</p>
                     <div className="flex items-center gap-4">
                         <div className="flex items-center border border-gray-300 rounded-md">
-                            <button onClick={() => handleQuantityChange(-1)} className="p-3 text-gray-700 hover:bg-gray-100 rounded-l-md disabled:opacity-50" disabled={quantity === 1}><MinusIcon className="w-5 h-5" /></button>
+                            <button onClick={() => handleQuantityChange(-1)} className="p-3 text-gray-700 hover:bg-gray-100 rounded-l-md disabled:opacity-50" disabled={quantity === 1 || !product.inStock}><MinusIcon className="w-5 h-5" /></button>
                             <span className="px-5 text-lg font-semibold w-16 text-center">{quantity}</span>
-                            <button onClick={() => handleQuantityChange(1)} className="p-3 text-gray-700 hover:bg-gray-100 rounded-r-md"><PlusIcon className="w-5 h-5" /></button>
+                            <button onClick={() => handleQuantityChange(1)} className="p-3 text-gray-700 hover:bg-gray-100 rounded-r-md disabled:opacity-50" disabled={!product.inStock}><PlusIcon className="w-5 h-5" /></button>
                         </div>
-                        <button onClick={handleAddToCart} className="flex-grow bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors">Add to Cart</button>
-                        <button onClick={handleBuyNow} className="bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-md hover:bg-gray-50 transition-colors">Buy Now</button>
+                        <button
+                            onClick={handleAddToCart}
+                            disabled={!product.inStock}
+                            className="flex-grow bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600"
+                        >
+                            {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+                        </button>
+                        <button
+                            onClick={handleBuyNow}
+                            disabled={!product.inStock}
+                            className="bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Buy Now
+                        </button>
                     </div>
                 </div>
             </div>

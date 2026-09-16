@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit/debit cards, UPI, net banking, and popular digital wallets for a secure and easy checkout experience.',
+    answer: 'We currently accept Cash on Delivery (COD) only. You pay in cash when your order arrives at your doorstep - no online payment is required at checkout.',
   },
   {
     question: 'How long does delivery take?',
@@ -91,7 +91,7 @@ const HelpCenter = () => {
             <h4 className="font-semibold mt-6">How to Initiate a Return</h4>
             <p>To initiate a return, please follow these steps:</p>
             <ol className="list-decimal pl-5 space-y-2">
-              <li>Contact our Customer Support team at support@vanraispices.com or call us at +91-9876543210 within the eligible return period.</li>
+              <li>Contact our Customer Support team at dhairya4507@gmail.com or call us at +91 8767934391 within the eligible return period.</li>
               <li>Provide your order number, the name of the item(s) you wish to return, and the reason for the return. For damaged/incorrect items, please attach clear photos.</li>
               <li>Our team will review your request and provide you with a Return Authorization (RA) number and instructions on how to send back the product.</li>
               <li>Pack the items securely in their original packaging, including all accessories and documentation. Clearly mark the RA number on the outside of the package.</li>
@@ -102,8 +102,8 @@ const HelpCenter = () => {
             <p>Once we receive and inspect the returned item(s), we will process your refund or exchange accordingly:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                <strong>Refunds:</strong> Approved refunds will be processed within 5-10 business days to the original method of payment. You will
-                be notified via email once the refund has been processed.
+                <strong>Refunds:</strong> Since all orders are Cash on Delivery, approved refunds are processed within 5-10 business days via
+                bank transfer or UPI to an account you provide. You will be notified via email once the refund has been processed.
               </li>
               <li>
                 <strong>Exchanges:</strong> If you requested an exchange for an incorrect or damaged item, the replacement will be shipped to you at
@@ -128,18 +128,18 @@ const HelpCenter = () => {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <a
-              href="mailto:support@vanraispices.com"
+              href="mailto:dhairya4507@gmail.com"
               className="flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-md hover:bg-gray-100 transition-colors"
             >
               <EnvelopeIcon className="w-5 h-5" />
               Email Us
             </a>
             <a
-              href="tel:+919876543210"
+              href="tel:+918767934391"
               className="flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-md hover:bg-gray-100 transition-colors"
             >
               <PhoneIcon className="w-5 h-5" />
-              Call Us +91-9876543210
+              Call Us +91 8767934391
             </a>
           </div>
         </section>

@@ -21,6 +21,12 @@ const SORT_BY_MAP = {
 // Maps the sidebar's category keys to the values stored on each product.
 const CATEGORY_MAP = { spices: 'Spices', masalas: 'Masalas', herbs: 'Herbs' };
 
+// Must match FiltersSidebar's PRICE_SLIDER_MAX. At this value the slider
+// means "no upper limit", so we don't send maxPrice to the backend at all -
+// that way a product priced above the slider's max is never silently
+// filtered out, no matter how high the catalog's prices go.
+const PRICE_SLIDER_MAX = 2000;
+
 // Pagination component
 const Pagination = ({ page, pages, buildPageUrl }) => {
     const navigate = useNavigate();
@@ -85,7 +91,7 @@ const Shop = () => {
   // the WHOLE catalog instead of only the 8 products on the current page.
   const [currentFilters, setCurrentFilters] = useState({
       categories: [],
-      maxPrice: 500,
+      maxPrice: PRICE_SLIDER_MAX,
       availability: { inStock: false, outOfStock: false },
       sortBy: 'Popularity'
   });
@@ -112,7 +118,10 @@ const Shop = () => {
             params.set('category', activeCategories.join(','));
         }
 
-        params.set('maxPrice', currentFilters.maxPrice);
+        // Only constrain by price if the slider isn't sitting at "no limit".
+        if (currentFilters.maxPrice < PRICE_SLIDER_MAX) {
+            params.set('maxPrice', currentFilters.maxPrice);
+        }
 
         const { inStock, outOfStock } = currentFilters.availability;
         if (inStock && !outOfStock) params.set('inStock', 'true');

@@ -37,6 +37,10 @@ const Checkbox = ({ label, name, checked, onChange }) => (
   </label>
 );
 
+// The slider's upper bound. Deliberately generous — see handlePriceChange
+// below for how we avoid ever silently hiding products priced above it.
+const PRICE_SLIDER_MAX = 2000;
+
 // FiltersSidebar component
 const FiltersSidebar = ({ onFilterChange, currentFilters }) => {
   // Use local state to manage inputs, then sync to parent via onFilterChange
@@ -62,11 +66,11 @@ const FiltersSidebar = ({ onFilterChange, currentFilters }) => {
 
   const clearFilters = () => {
     setCategories({ spices: false, masalas: false, herbs: false });
-    setPrice(500);
+    setPrice(PRICE_SLIDER_MAX);
     setAvailability({ inStock: false, outOfStock: false });
     onFilterChange({
         categories: [],
-        maxPrice: 500,
+        maxPrice: PRICE_SLIDER_MAX,
         availability: { inStock: false, outOfStock: false },
         sortBy: 'Popularity' // Reset sort preference too
     });
@@ -117,14 +121,17 @@ const FiltersSidebar = ({ onFilterChange, currentFilters }) => {
         <input
           type="range"
           min="50"
-          max="500"
+          max={PRICE_SLIDER_MAX}
           value={price}
           onChange={handlePriceChange}
           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-red"
         />
         <div className="flex justify-between text-gray-600 text-sm mt-2">
           <span>₹50</span>
-          <span>Max: ₹{price}</span>
+          {/* At the slider's max, treat it as "no upper limit" rather than a
+              hard ₹2000 ceiling, so a future product priced above the slider
+              max is never silently hidden by this filter. */}
+          <span>Max: {price >= PRICE_SLIDER_MAX ? 'No limit' : `₹${price}`}</span>
         </div>
       </FilterSection>
 

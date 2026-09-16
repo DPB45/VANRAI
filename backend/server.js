@@ -11,6 +11,7 @@ import userRoutes from './routes/userRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import sitemapRoutes from './routes/sitemapRoutes.js';
+import newsletterRoutes from './routes/newsletterRoutes.js';
 import { seedProducts } from './controllers/productController.js';
 
 dotenv.config();
@@ -69,6 +70,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 app.use('/', sitemapRoutes);
 
 // --- ERROR HANDLING ---
@@ -91,4 +93,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
