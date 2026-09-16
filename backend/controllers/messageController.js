@@ -35,7 +35,14 @@ const createMessage = asyncHandler(async (req, res) => {
 
   if (newMessage) {
     // --- 2. EMAIL TRIGGER: Notify Site Owner ---
-    await sendEmail({
+    // The message itself is already safely saved in the DB at this point
+    // regardless of what happens next, so an email outage here shouldn't
+    // fail the visitor's submission — but it also shouldn't be silently
+    // swallowed, or the site owner has no way to know a notification was
+    // missed. sendEmail() already returns false on failure (see
+    // requestPasswordReset for the same pattern) instead of throwing, so we
+    // just check it and log clearly rather than assuming success.
+    const emailSent = await sendEmail({
         to: siteOwnerEmail, // Send to site owner
         subject: `[New Contact] ${sanitizedSubject} from ${sanitizedName}`,
         text: `New message from ${sanitizedName} (${email}). Subject: ${sanitizedSubject}. Phone: ${phone || 'N/A'}. Message: ${sanitizedMessage}`,
@@ -49,7 +56,14 @@ const createMessage = asyncHandler(async (req, res) => {
             <p>${sanitizedMessage}</p>
         `,
     });
-    console.log(`📬 Contact form submitted and email sent to site owner.`);
+
+    if (emailSent) {
+      console.log(' Contact form submitted and email sent to site owner.');
+    } else {
+      console.error(
+        `⚠️  Contact form message ${newMessage._id} was saved, but the site-owner notification email FAILED to send. Check it manually.`
+      );
+    }
     // ---------------------------------------------
 
     res.status(201).json({

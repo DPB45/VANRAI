@@ -41,14 +41,6 @@ const limiter = rateLimit({
 // Apply rate limiting to all requests
 app.use(limiter);
 
-// Sanitization
-app.use((req, res, next) => {
-    if (req.body) req.body = mongoSanitize(req.body);
-    if (req.query) req.query = mongoSanitize(req.query);
-    if (req.params) req.params = mongoSanitize(req.params);
-    next();
-});
-
 // CORS configuration
 app.use(cors({
     origin: [
@@ -59,7 +51,29 @@ app.use(cors({
     credentials: true
 }));
 
+// Body parser MUST run before the sanitization middleware below. req.body
+// doesn't exist until this has run, so sanitizing before this point was a
+// no-op that silently did nothing for body-based NoSQL injection attempts
+// (e.g. a login POST with {"email": {"$gt": ""}}). Previously this
+// middleware ran before express.json(), so req.body was always undefined
+// here and the `if (req.body)` guard skipped the sanitize call entirely.
 app.use(express.json());
+
+// Sanitization now runs AFTER the body has actually been parsed, so
+// req.body is genuinely sanitized. req.query is parsed directly from the
+// URL and was always available/sanitized regardless of ordering.
+//
+// Note on req.params: path segments (e.g. the :token in /resetpassword/:token)
+// are always plain strings pulled straight out of the URL — they can never
+// arrive as the nested $-operator objects mongo-sanitize guards against, so
+// there's nothing for it to strip there either way; it's kept here only in
+// case future routes read structured data out of req.params.
+app.use((req, res, next) => {
+    if (req.body) req.body = mongoSanitize(req.body);
+    if (req.query) req.query = mongoSanitize(req.query);
+    if (req.params) req.params = mongoSanitize(req.params);
+    next();
+});
 
 // --- ROUTES ---
 app.get('/', (req, res) => {
