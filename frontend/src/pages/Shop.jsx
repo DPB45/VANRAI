@@ -74,11 +74,38 @@ const Pagination = ({ page, pages, buildPageUrl }) => {
 };
 
 
+// Derives the sidebar's filter shape from a URLSearchParams — shared by
+// the initial state below and the resync effect, so a /shop?category=...
+// link works both as a fresh page load AND as an in-app navigation (e.g.
+// clicking a different footer link while already on the Shop page, where
+// React Router reuses the existing component instance rather than
+// remounting it).
+const getFiltersFromQuery = (query) => {
+    const categoryParam = query.get('category');
+    const categories = categoryParam
+        ? Object.entries(CATEGORY_MAP)
+            .filter(([, label]) => categoryParam.split(',').includes(label))
+            .map(([key]) => key)
+        : [];
+
+    const sortByParam = query.get('sortBy');
+    const sortBy = Object.entries(SORT_BY_MAP).find(([, value]) => value === sortByParam)?.[0] || 'Popularity';
+
+    return {
+        categories,
+        maxPrice: PRICE_SLIDER_MAX,
+        availability: { inStock: false, outOfStock: false },
+        sortBy,
+    };
+};
+
 const Shop = () => {
   const query = useQuery();
   const navigate = useNavigate();
   const keyword = query.get('keyword') || '';
   const pageNumber = Number(query.get('pageNumber')) || 1;
+  const categoryQueryParam = query.get('category');
+  const sortByQueryParam = query.get('sortBy');
 
   const [products, setProducts] = useState([]);
   const [pages, setPages] = useState(1);
@@ -90,12 +117,22 @@ const Shop = () => {
 
   // Filters are sent straight to the backend now, so they're applied across
   // the WHOLE catalog instead of only the 8 products on the current page.
-  const [currentFilters, setCurrentFilters] = useState({
-      categories: [],
-      maxPrice: PRICE_SLIDER_MAX,
-      availability: { inStock: false, outOfStock: false },
-      sortBy: 'Popularity'
-  });
+  // Seeded from the URL (not just hardcoded defaults) so a link like
+  // /shop?category=Masalas or /shop?sortBy=priceAsc — e.g. from the footer
+  // or a bookmark — actually pre-applies that filter instead of silently
+  // landing on the unfiltered page.
+  const [currentFilters, setCurrentFilters] = useState(() => getFiltersFromQuery(query));
+
+  // Re-derive filters whenever the URL's category/sortBy actually change
+  // (not on every render — query is a fresh URLSearchParams instance each
+  // time, so we key off the primitive values pulled from it above). This
+  // never fights with in-page filter interaction: FiltersSidebar changes
+  // never write back to the URL, so the only way these two params change
+  // is genuine external navigation.
+  useEffect(() => {
+    setCurrentFilters((prev) => ({ ...prev, ...getFiltersFromQuery(query) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryQueryParam, sortByQueryParam]);
 
   // Builds a /shop URL that preserves the keyword, only changing the page
   // number. Used by the Pagination component.

@@ -1,73 +1,136 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-// Importing social icons - from the correct 'fa6' path
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa6';
+
+const SOCIAL_LINKS = [
+  { href: '#', label: 'Facebook', Icon: FaFacebookF },
+  { href: '#', label: 'Instagram', Icon: FaInstagram },
+  { href: '#', label: 'LinkedIn', Icon: FaLinkedinIn },
+  { href: '#', label: 'YouTube', Icon: FaYoutube },
+];
+
+// One column of footer nav links, sharing the same heading treatment so
+// "Quick Links" / "Company" / "Shop" line up and read as one family.
+const FooterColumn = ({ title, links }) => (
+  <div>
+    <h3 className="font-display text-sm font-semibold tracking-wide text-white">{title}</h3>
+    <span className="mt-2 block h-[2px] w-8 rounded-full bg-gradient-to-r from-red-500 to-amber-400" />
+    <nav className="mt-4 flex flex-col gap-2.5">
+      {links.map((link) => (
+        <Link
+          key={link.label}
+          to={link.to}
+          className="text-sm text-stone-400 transition-colors hover:text-amber-400"
+        >
+          {link.label}
+        </Link>
+      ))}
+    </nav>
+  </div>
+);
 
 const Footer = () => {
   return (
-    <footer className="bg-white border-t border-gray-200">
-      <div className="container mx-auto px-4 py-8">
+    <footer className="bg-[#1C1614] text-stone-300">
+      {/* Echoes the header's top gradient line, so the two accent colors
+          this store is built on bookend the whole page. */}
+      <div className="h-[3px] w-full bg-gradient-to-r from-red-700 via-red-500 to-amber-400" />
 
-        {/* Top Section: Links */}
-        <div className="flex flex-col md:flex-row justify-between text-center md:text-left mb-8">
+      <div className="container mx-auto px-4 py-14">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-12 md:grid-cols-4 lg:grid-cols-12">
 
-          {/* Quick Links */}
-          <div className="mb-6 md:mb-0">
-            <h3 className="font-semibold text-gray-800 mb-3">Quick Links</h3>
-            <nav className="flex flex-col space-y-2">
-              <Link to="/about" className="text-gray-600 hover:text-red-600">About Us</Link>
-              <Link to="/contact" className="text-gray-600 hover:text-red-600">Contact Us</Link>
-              <Link to="/help" className="text-gray-600 hover:text-red-600">Help & FAQs</Link>
-              <Link to="/help" className="text-gray-600 hover:text-red-600">Return Policy</Link>
-            </nav>
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-4 lg:col-span-4">
+            <Link to="/" className="group inline-flex items-center gap-2.5">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-7 w-7 flex-shrink-0 text-red-500"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 21C12 21 4 16.5 4 9.5C4 5 7.5 2 12 2C16.5 2 20 5 20 9.5C20 16.5 12 21 12 21Z"
+                  fill="currentColor"
+                  fillOpacity="0.18"
+                />
+                <path
+                  d="M12 21V6M12 6C9 6 6 4.5 5 2M12 6C15 6 18 4.5 19 2"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="font-display text-xl font-bold text-white">Vanrai Spices</span>
+            </Link>
+
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-stone-400">
+              Pure, authentic spices sourced directly from Indian farms — carrying the same
+              tradition from our fields to your kitchen.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              {SOCIAL_LINKS.map((social) => {
+                const SocialIcon = social.Icon;
+                return (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    aria-label={social.label}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-stone-300 transition-colors hover:bg-amber-400 hover:text-[#1C1614] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+                  >
+                    <SocialIcon className="h-4 w-4" />
+                  </a>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Company */}
-          <div className="mb-6 md:mb-0">
-            <h3 className="font-semibold text-gray-800 mb-3">Company</h3>
-            <nav className="flex flex-col space-y-2">
-              <Link to="/about" className="text-gray-600 hover:text-red-600">Our Story</Link>
-              <Link to="/recipes" className="text-gray-600 hover:text-red-600">Blog & Recipes</Link>
-              <Link to="/contact" className="text-gray-600 hover:text-red-600">Privacy Policy</Link>
-              <Link to="/contact" className="text-gray-600 hover:text-red-600">Terms of Service</Link>
-            </nav>
+          <div className="col-span-1 md:col-span-1 lg:col-span-3">
+            <FooterColumn
+              title="Quick Links"
+              links={[
+                { label: 'About Us', to: '/about' },
+                { label: 'Contact Us', to: '/contact' },
+                { label: 'Help & FAQs', to: '/help' },
+                { label: 'Return Policy', to: '/help' },
+              ]}
+            />
           </div>
 
-          {/* Shop */}
-          <div className="mb-6 md:mb-0">
-            <h3 className="font-semibold text-gray-800 mb-3">Shop</h3>
-            <nav className="flex flex-col space-y-2">
-              <Link to="/shop" className="text-gray-600 hover:text-red-600">All Spices</Link>
-              <Link to="/shop" className="text-gray-600 hover:text-red-600">Masalas</Link>
-              <Link to="/shop" className="text-gray-600 hover:text-red-600">Best Sellers</Link>
-              <Link to="/shop" className="text-gray-600 hover:text-red-600">Herbs</Link>
-            </nav>
+          <div className="col-span-1 md:col-span-1 lg:col-span-2">
+            <FooterColumn
+              title="Company"
+              links={[
+                { label: 'Our Story', to: '/about' },
+                { label: 'Blog & Recipes', to: '/recipes' },
+                { label: 'Privacy Policy', to: '/contact' },
+                { label: 'Terms of Service', to: '/contact' },
+              ]}
+            />
+          </div>
+
+          <div className="col-span-2 md:col-span-2 lg:col-span-3">
+            <FooterColumn
+              title="Shop"
+              links={[
+                { label: 'All Spices', to: '/shop' },
+                { label: 'Masalas', to: '/shop?category=Masalas' },
+                { label: 'Best Sellers', to: '/shop?sortBy=popularity' },
+                { label: 'Herbs', to: '/shop?category=Herbs' },
+              ]}
+            />
           </div>
 
         </div>
 
-        {/* Bottom Section: Socials & Copyright */}
-        <div className="flex flex-col md:flex-row justify-between items-center border-t border-gray-100 pt-6">
-          <p className="text-sm text-gray-500 mb-4 md:mb-0">
+        {/* Bottom bar */}
+        <div className="mt-12 flex flex-col items-center gap-4 border-t border-white/10 pt-6 md:flex-row md:justify-between">
+          <p className="text-xs text-stone-500">
             © {new Date().getFullYear()} Vanrai Spices. All rights reserved.
           </p>
-
-          <div className="flex space-x-4">
-            <a href="#" className="text-gray-500 hover:text-red-600">
-              <FaFacebookF className="w-5 h-5" />
-            </a>
-            <a href="#" className="text-gray-500 hover:text-red-600">
-              <FaInstagram className="w-5 h-5" />
-            </a>
-            <a href="#" className="text-gray-500 hover:text-red-600">
-              <FaLinkedinIn className="w-5 h-5" />
-            </a>
-            <a href="#" className="text-gray-500 hover:text-red-600">
-              <FaYoutube className="w-5 h-5" />
-            </a>
-          </div>
+          <p className="text-xs text-stone-500">Crafted with care, rooted in tradition.</p>
         </div>
-
       </div>
     </footer>
   );
