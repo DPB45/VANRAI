@@ -16,8 +16,26 @@ import { seedProducts } from './controllers/productController.js';
 
 dotenv.config();
 
+// Fail fast: without this, token signing/verification silently breaks the
+// first time someone tries to log in (or on every request thereafter),
+// which is a much more confusing failure mode than refusing to start.
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL ERROR: JWT_SECRET is not set. Refusing to start.');
+  process.exit(1);
+}
+
 connectDB();
-seedProducts();
+
+// seedProducts() is wrapped in asyncHandler, which expects Express's
+// (req, res, next) signature — calling it directly like this passes
+// next=undefined, so if it ever rejects, asyncHandler's internal
+// `.catch(next)` can't actually call next() and the rejection goes
+// unhandled, which crashes the process on modern Node by default. The
+// .catch() here ensures a seeding failure is logged instead of taking
+// the whole server down.
+seedProducts().catch((err) => {
+  console.error('⚠️  Product seeding check failed:', err.message);
+});
 
 const app = express();
 
@@ -41,13 +59,21 @@ const limiter = rateLimit({
 // Apply rate limiting to all requests
 app.use(limiter);
 
-// CORS configuration
+// CORS configuration — the known deployed domains are kept as a hardcoded
+// fallback (so misconfiguring/forgetting the env var in one environment
+// doesn't lock out the real frontend), with FRONTEND_URL added on top
+// rather than ignored, so a new/staging domain doesn't need a code change.
+const corsOrigins = [
+    "http://localhost:5173",                // Localhost
+    "https://vanrai.vercel.app",            // Your actual Vercel domain
+    "https://vanrai-spices.vercel.app",     // Optional backup
+];
+if (process.env.FRONTEND_URL && !corsOrigins.includes(process.env.FRONTEND_URL)) {
+    corsOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-    origin: [
-        "http://localhost:5173",                // Localhost
-        "https://vanrai.vercel.app",            // Your actual Vercel domain
-        "https://vanrai-spices.vercel.app"      // Optional backup
-    ],
+    origin: corsOrigins,
     credentials: true
 }));
 
@@ -95,10 +121,20 @@ const notFound = (req, res, next) => {
 };
 
 const errorHandler = (err, req, res, next) => {
-    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    let message = err.message;
+
+    // A malformed ObjectId in any :id route (e.g. /api/products/not-an-id)
+    // throws a Mongoose CastError, which otherwise surfaces as an opaque
+    // 500 "Cast to ObjectId failed..." — this is really just "not found".
+    if (err.name === 'CastError' && err.kind === 'ObjectId') {
+        statusCode = 404;
+        message = 'Resource not found.';
+    }
+
     res.status(statusCode);
     res.json({
-        message: err.message,
+        message,
         stack: process.env.NODE_ENV === 'production' ? null : err.stack,
     });
 };

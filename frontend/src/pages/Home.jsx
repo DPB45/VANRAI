@@ -165,7 +165,7 @@ const Home = () => {
             <p>
               Our traditional methods, combined with modern standards,
               guarantee purity. Join us in celebrating flavors that
-              have been lost in time, settings "Your Trust Is Our Wealth"
+              have been lost in time, setting "Your Trust Is Our Wealth"
               as the promise we live by every day.
             </p>
           </div>

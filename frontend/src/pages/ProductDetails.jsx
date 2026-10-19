@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  PlusIcon, MinusIcon, ChevronLeftIcon, ChevronRightIcon,
+  PlusIcon, MinusIcon,
   HandThumbUpIcon, PencilSquareIcon, TrashIcon, UserIcon // <-- ADDED UserIcon HERE
 } from '@heroicons/react/24/solid';
 import { HandThumbUpIcon as HandThumbUpOutline } from '@heroicons/react/24/outline';

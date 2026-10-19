@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { LockClosedIcon, EnvelopeIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useUser } from '../context/UserContext';
@@ -20,23 +20,6 @@ const AuthTab = ({ title, activeTab, setActiveTab }) => (
     </button>
 );
 
-// --- Reusable login method button (Updated for mobile flex) ---
-const MethodButton = ({ title, activeMethod, setActiveMethod }) => (
-    <button
-        type="button"
-        onClick={() => setActiveMethod(title)}
-        className={`flex-1 py-2.5 px-4 text-center text-sm font-semibold rounded-md transition-colors duration-150 ease-in-out whitespace-nowrap
-      ${activeMethod === title
-            ? 'bg-red-600 text-white shadow-md'
-            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-            }
-    `}
-    >
-        {title === 'Email' ? 'Login with Email' : 'Login with OTP'}
-    </button>
-);
-
-
 // Main Login Page
 const Login = () => {
     const [activeTab, setActiveTab] = useState('Login');
@@ -56,7 +39,13 @@ const Login = () => {
     const [error, setError] = useState('');
 
     const navigate = useNavigate();
+    const location = useLocation();
     const { login } = useUser();
+
+    // Where to go after a successful login/register. Pages that bounce a
+    // logged-out user here (e.g. Checkout) pass `state: { from: '/checkout' }`
+    // so they land back where they were instead of always on the dashboard.
+    const redirectTo = location.state?.from || '/account/dashboard';
 
     // --- Validation ---
     const validateInputs = () => {
@@ -105,7 +94,7 @@ const Login = () => {
                 login(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
                 setLoading(false);
-                navigate('/account/dashboard');
+                navigate(redirectTo, { replace: true });
             }
             else if (activeTab === 'Login') {
                 if (activeMethod === 'Email') {
@@ -136,7 +125,7 @@ const Login = () => {
                     login(data);
                     localStorage.setItem('userInfo', JSON.stringify(data));
                     setLoading(false);
-                    navigate('/account/dashboard');
+                    navigate(redirectTo, { replace: true });
 
                 } else if (activeMethod === 'OTP') {
                     setError('OTP Login not yet implemented.');
@@ -171,13 +160,9 @@ const Login = () => {
                     </div>
                 )}
 
-                {/* Methods (Hide if in 2FA mode) */}
-                {!show2FAInput && activeTab === 'Login' && (
-                    <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                        <MethodButton title="Email" activeMethod={activeMethod} setActiveMethod={setActiveMethod} />
-                        <MethodButton title="OTP" activeMethod={activeMethod} setActiveMethod={setActiveMethod} />
-                    </div>
-                )}
+                {/* The OTP login method is intentionally not offered until it is
+                    actually implemented — showing a tab that only says "coming
+                    soon" misleads visitors into thinking it works. */}
 
                 {error && (
                     <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 rounded-md text-center text-sm font-medium">
@@ -281,10 +266,7 @@ const Login = () => {
                                     {/* Remember/Forgot (Login only) */}
                                     {activeTab === 'Login' && (
                                         <div className="flex items-center justify-between text-sm">
-                                            <div className="flex items-center">
-                                                <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded" />
-                                                <label htmlFor="remember-me" className="ml-2 block text-gray-900">Remember me</label>
-                                            </div>
+                                            <span />
                                             <Link to="/forgot-password" className="font-medium text-red-600 hover:text-red-500">
                                                 Forgot password?
                                             </Link>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useUser } from '../context/UserContext';
-import { CheckCircleIcon, XCircleIcon, ClockIcon, TruckIcon, HomeIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, TruckIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 
 // --- Order Status Stepper ---
@@ -51,7 +51,12 @@ const OrderDetails = () => {
     const [trackingUrl, setTrackingUrl] = useState('');
 
     const fetchOrderDetails = async () => {
-        if (!userInfo) return;
+        if (!userInfo) {
+            // Not logged in: stop the spinner (it used to stay on "Loading..."
+            // forever) so the login prompt below can render.
+            setLoading(false);
+            return;
+        }
         try {
             setLoading(true);
             const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
@@ -92,6 +97,16 @@ const OrderDetails = () => {
         }
     };
 
+    if (!userInfo) {
+        return (
+            <div className="container mx-auto px-4 py-20 text-center">
+                <p className="text-lg text-gray-600 mb-6">Please log in to view this order.</p>
+                <Link to="/login" state={{ from: `/order/${orderId}` }} className="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition-colors">
+                    Go to Login
+                </Link>
+            </div>
+        );
+    }
     if (loading) return <p className="text-center py-20">Loading...</p>;
     if (error) return <p className="text-center py-20 text-red-500">{error}</p>;
     if (!order) return <p className="text-center py-20">Order not found.</p>;
@@ -105,7 +120,7 @@ const OrderDetails = () => {
                 {/* Header & Status */}
                 <div className="border-b pb-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-semibold text-gray-800">Order #{order._id.substring(0, 10)}...</h2>
+                        <h2 className="text-2xl font-semibold text-gray-800">Order #{order._id.slice(-8).toUpperCase()}</h2>
                         <span className="text-sm text-gray-500">
                             Placed: {new Date(order.createdAt).toLocaleDateString()}
                         </span>
@@ -123,7 +138,7 @@ const OrderDetails = () => {
                             <div className="mt-2 text-sm text-blue-900 grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <p><span className="font-semibold">Courier:</span> {order.trackingInfo.courierName}</p>
                                 <p><span className="font-semibold">Tracking ID:</span> {order.trackingInfo.trackingId}</p>
-                                {order.trackingInfo.trackingUrl && (
+                                {/^https?:\/\//i.test(order.trackingInfo.trackingUrl || '') && (
                                     <p>
                                         <a href={order.trackingInfo.trackingUrl} target="_blank" rel="noreferrer" className="underline hover:text-blue-600">
                                             Track Package &rarr;
@@ -197,8 +212,10 @@ const OrderDetails = () => {
                                 <div className="text-gray-600">
                                     <p>{order.shippingAddress.fullName}</p>
                                     <p>{order.shippingAddress.addressLine1}</p>
-                                    <p>{order.shippingAddress.city}, {order.shippingAddress.postalCode}</p>
+                                    {order.shippingAddress.addressLine2 && <p>{order.shippingAddress.addressLine2}</p>}
+                                    <p>{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}</p>
                                     <p>{order.shippingAddress.country}</p>
+                                    {order.shippingAddress.phone && <p>Phone: {order.shippingAddress.phone}</p>}
                                 </div>
                             )}
                         </div>

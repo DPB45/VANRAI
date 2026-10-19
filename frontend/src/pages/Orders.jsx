@@ -86,7 +86,7 @@ const Orders = () => {
               {/* This map should now be safe */}
               {orders.map((order) => (
                 <tr key={order._id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order._id.substring(0, 10)}...</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{order._id.slice(-8).toUpperCase()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(order.createdAt).toLocaleDateString('en-IN')}
                   </td>

@@ -6,8 +6,11 @@ import { HeartIcon } from '@heroicons/react/24/outline';
 import ShopProductCard from '../components/ShopProductCard';
 
 const Wishlist = () => {
-    const { userInfo } = useUser();
-    const [wishlistItems, setWishlistItems] = useState([]);
+    const { userInfo, isInWishlist } = useUser();
+    const [fetchedItems, setWishlistItems] = useState([]);
+    // Items un-hearted on this page disappear immediately (the heart toggles
+    // shared context state) instead of lingering until the next reload.
+    const wishlistItems = fetchedItems.filter((p) => isInWishlist(p._id));
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 

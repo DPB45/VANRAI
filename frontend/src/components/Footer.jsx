@@ -2,12 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa6';
 
+// Fill in the real profile URL for each network. Entries with an empty href
+// are simply not rendered, so visitors never see icons that go nowhere.
 const SOCIAL_LINKS = [
-  { href: '#', label: 'Facebook', Icon: FaFacebookF },
-  { href: '#', label: 'Instagram', Icon: FaInstagram },
-  { href: '#', label: 'LinkedIn', Icon: FaLinkedinIn },
-  { href: '#', label: 'YouTube', Icon: FaYoutube },
-];
+  { href: '', label: 'Facebook', Icon: FaFacebookF },
+  { href: '', label: 'Instagram', Icon: FaInstagram },
+  { href: '', label: 'LinkedIn', Icon: FaLinkedinIn },
+  { href: '', label: 'YouTube', Icon: FaYoutube },
+].filter((social) => social.href);
 
 // One column of footer nav links, sharing the same heading treatment so
 // "Quick Links" / "Company" / "Shop" line up and read as one family.
@@ -69,6 +71,7 @@ const Footer = () => {
               tradition from our fields to your kitchen.
             </p>
 
+            {SOCIAL_LINKS.length > 0 && (
             <div className="mt-6 flex gap-3">
               {SOCIAL_LINKS.map((social) => {
                 const SocialIcon = social.Icon;
@@ -76,6 +79,8 @@ const Footer = () => {
                   <a
                     key={social.label}
                     href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     aria-label={social.label}
                     className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-stone-300 transition-colors hover:bg-amber-400 hover:text-[#1C1614] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                   >
@@ -84,6 +89,7 @@ const Footer = () => {
                 );
               })}
             </div>
+            )}
           </div>
 
           <div className="col-span-1 md:col-span-1 lg:col-span-3">
@@ -104,8 +110,8 @@ const Footer = () => {
               links={[
                 { label: 'Our Story', to: '/about' },
                 { label: 'Blog & Recipes', to: '/recipes' },
-                { label: 'Privacy Policy', to: '/contact' },
-                { label: 'Terms of Service', to: '/contact' },
+                { label: 'Privacy Policy', to: '/privacy-policy' },
+                { label: 'Terms of Service', to: '/terms' },
               ]}
             />
           </div>

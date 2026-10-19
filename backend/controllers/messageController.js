@@ -3,9 +3,23 @@ import asyncHandler from 'express-async-handler';
 import validator from 'validator';
 import sendEmail from '../utils/emailUtils.js'; // <-- 1. Import email utility
 
-const stripHtml = (input) => {
+// Escapes HTML special characters so user input can never break out of the
+// HTML email template below (e.g. injecting extra tags/attributes). Unlike
+// the old stripHtml() — whose /<[^>]*>?/gm regex would greedily consume
+// everything from a bare "<" to the end of the string when no closing ">"
+// followed it (so "price < 100 rupees, please reply" silently became just
+// "price ") — this never mutates or truncates the user's actual words. It's
+// also applied ONLY when building the HTML email, never to what's stored in
+// the database, so the admin inbox (MessageList.jsx) always shows exactly
+// what the visitor typed (React already escapes it safely on render).
+const escapeHtml = (input) => {
     if (typeof input !== 'string') return input;
-    return input.replace(/<[^>]*>?/gm, '');
+    return input
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 };
 
 const createMessage = asyncHandler(async (req, res) => {
@@ -20,17 +34,17 @@ const createMessage = asyncHandler(async (req, res) => {
     throw new Error('Invalid email format.');
   }
 
-  const sanitizedName = stripHtml(name);
-  const sanitizedSubject = stripHtml(subject);
-  const sanitizedMessage = stripHtml(message);
+  // Store exactly what the visitor typed — no mangling. React escapes it
+  // automatically wherever it's rendered in the admin UI, so there's no
+  // injection risk from storing it verbatim, and nothing gets eaten.
   const siteOwnerEmail = process.env.EMAIL_USER; // Send to the configured Gmail address
 
   const newMessage = await Message.create({
-    name: sanitizedName,
-    email: email,
-    phone: stripHtml(phone),
-    subject: sanitizedSubject,
-    message: sanitizedMessage,
+    name,
+    email,
+    phone,
+    subject,
+    message,
   });
 
   if (newMessage) {
@@ -44,16 +58,16 @@ const createMessage = asyncHandler(async (req, res) => {
     // just check it and log clearly rather than assuming success.
     const emailSent = await sendEmail({
         to: siteOwnerEmail, // Send to site owner
-        subject: `[New Contact] ${sanitizedSubject} from ${sanitizedName}`,
-        text: `New message from ${sanitizedName} (${email}). Subject: ${sanitizedSubject}. Phone: ${phone || 'N/A'}. Message: ${sanitizedMessage}`,
+        subject: `[New Contact] ${subject} from ${name}`,
+        text: `New message from ${name} (${email}). Subject: ${subject}. Phone: ${phone || 'N/A'}. Message: ${message}`,
         html: `
             <h2>New Contact Message Received</h2>
-            <p><strong>From:</strong> ${sanitizedName} (${email})</p>
-            <p><strong>Subject:</strong> ${sanitizedSubject}</p>
-            <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
+            <p><strong>From:</strong> ${escapeHtml(name)} (${escapeHtml(email)})</p>
+            <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
+            <p><strong>Phone:</strong> ${escapeHtml(phone) || 'N/A'}</p>
             <hr>
             <p><strong>Message:</strong></p>
-            <p>${sanitizedMessage}</p>
+            <p>${escapeHtml(message)}</p>
         `,
     });
 
@@ -68,7 +82,7 @@ const createMessage = asyncHandler(async (req, res) => {
 
     res.status(201).json({
       _id: newMessage._id,
-      name: sanitizedName,
+      name,
       message: 'Message sent successfully!',
     });
   } else {

@@ -18,6 +18,9 @@ const orderSchema = new mongoose.Schema(
     ],
     shippingAddress: {
       fullName: { type: String, required: true },
+      // Contact number for the delivery person (essential for COD). Not
+      // `required` so orders placed before this field existed remain valid.
+      phone: { type: String },
       addressLine1: { type: String, required: true },
       addressLine2: { type: String },
       city: { type: String, required: true },
@@ -25,7 +28,7 @@ const orderSchema = new mongoose.Schema(
       postalCode: { type: String, required: true },
       country: { type: String, required: true, default: 'India' },
     },
-    paymentMethod: { type: String, required: true, default: 'DemoPayment' },
+    paymentMethod: { type: String, required: true, default: 'COD' },
     paymentResult: {
       id: { type: String },
       status: { type: String },

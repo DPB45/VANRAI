@@ -138,6 +138,17 @@ const Addresses = () => {
         setShowForm(true);
     };
 
+    // Make an existing address the default (backend clears the flag on the others)
+    const handleSetDefault = async (addressId) => {
+        try {
+            const { data } = await axios.put(`/api/users/addresses/${addressId}`, { isDefault: true }, authConfig);
+            setAddresses(data);
+            toast.success('Default address updated.');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to set default address.');
+        }
+    };
+
     // Delete Address
     const handleDeleteClick = async (addressId) => {
         if (!window.confirm('Are you sure you want to delete this address?')) return;
@@ -178,6 +189,16 @@ const Addresses = () => {
             {/* Show Form (Pass initialData if editing) */}
             {showForm && (
                 <AddressForm
+                    // Without this key, clicking "Edit" on a different address
+                    // while this form is already open re-renders the SAME
+                    // AddressForm instance with new initialData — but its
+                    // inputs are uncontrolled (defaultValue), so their
+                    // on-screen values don't actually update. The form would
+                    // then submit the PREVIOUS address's text under the NEWLY
+                    // selected address's id. Keying on which address is being
+                    // edited forces a fresh mount (and fresh defaultValue) every
+                    // time the target changes.
+                    key={editingId || 'new'}
                     initialData={editingAddress}
                     onSave={handleSaveAddress}
                     onCancel={closeForm}
@@ -213,6 +234,14 @@ const Addresses = () => {
                                     >
                                         Edit
                                     </button>
+                                    {!address.isDefault && (
+                                        <button
+                                            onClick={() => handleSetDefault(address._id)}
+                                            className="text-sm font-medium text-gray-600 hover:text-red-600 hover:underline"
+                                        >
+                                            Set as default
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => handleDeleteClick(address._id)}
                                         className="text-sm font-medium text-gray-500 hover:text-red-600 hover:underline"

@@ -13,7 +13,8 @@ const FormInput = ({ label, id, name, value, onChange, error, isOptional = false
             {label} {isOptional && <span className="text-gray-400">(Optional)</span>}
         </label>
         <input
-            type={id === 'postalCode' ? 'number' : 'text'}
+            type="text"
+            inputMode={id === 'postalCode' || id === 'phone' ? 'numeric' : undefined}
             id={id}
             name={name}
             className={`w-full px-4 py-2 bg-white border rounded-md shadow-sm focus:outline-none focus:ring-2
@@ -36,15 +37,32 @@ const Checkout = () => {
     const [addressErrors, setAddressErrors] = useState({});
     const navigate = useNavigate();
 
-    const [shippingAddress, setShippingAddress] = useState({
-        fullName: userInfo?.name || '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: 'India',
+    // The draft address is kept in sessionStorage so that being bounced to
+    // /login mid-checkout (and back) doesn't wipe everything the shopper typed.
+    const DRAFT_KEY = 'vanraiCheckoutDraft';
+    const [shippingAddress, setShippingAddress] = useState(() => {
+        const base = {
+            fullName: userInfo?.name || '',
+            phone: '',
+            addressLine1: '',
+            addressLine2: '',
+            city: '',
+            state: '',
+            postalCode: '',
+            country: 'India',
+        };
+        try {
+            const saved = sessionStorage.getItem(DRAFT_KEY);
+            return saved ? { ...base, ...JSON.parse(saved) } : base;
+        } catch {
+            return base;
+        }
     });
+    const [placedOrderId, setPlacedOrderId] = useState(null);
+
+    useEffect(() => {
+        try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(shippingAddress)); } catch { /* ignore */ }
+    }, [shippingAddress]);
 
     // Redirect if cart becomes empty while on this page
     useEffect(() => {
@@ -68,10 +86,14 @@ const Checkout = () => {
         if (shippingAddress.city.trim() === '') { errors.city = 'City is required.'; isValid = false; }
         if (shippingAddress.state.trim() === '') { errors.state = 'State is required.'; isValid = false; }
 
+        if (!/^[6-9]\d{9}$/.test(shippingAddress.phone.trim())) {
+            errors.phone = 'Enter a valid 10-digit mobile number.'; isValid = false;
+        }
+
         if (shippingAddress.postalCode.trim() === '') {
             errors.postalCode = 'Postal Code is required.'; isValid = false;
-        } else if (!/^\d+$/.test(shippingAddress.postalCode)) {
-            errors.postalCode = 'Postal Code must be numeric.'; isValid = false;
+        } else if (!/^[1-9]\d{5}$/.test(shippingAddress.postalCode.trim())) {
+            errors.postalCode = 'Enter a valid 6-digit PIN code.'; isValid = false;
         }
 
         setAddressErrors(errors);
@@ -86,7 +108,7 @@ const Checkout = () => {
         if (!userInfo) {
             setError('Please log in to place an order.');
             setLoading(false);
-            navigate('/login');
+            navigate('/login', { state: { from: '/checkout' } });
             return;
         }
 
@@ -97,12 +119,10 @@ const Checkout = () => {
         }
 
         const orderData = {
-            orderItems: cartItems,
+            // Only ids + quantities matter: the server recomputes every price.
+            orderItems: cartItems.map((item) => ({ _id: item._id, name: item.name, quantity: item.quantity })),
             shippingAddress: shippingAddress,
             paymentMethod: 'COD',
-            itemsPrice: subtotal,
-            shippingPrice: shipping,
-            totalPrice: total,
         };
 
         try {
@@ -117,7 +137,8 @@ const Checkout = () => {
                 orderData,
                 config
             );
-            console.log('Order created successfully:', createdOrder);
+            try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+            setPlacedOrderId(createdOrder._id);
             clearCart();
             setIsModalOpen(true);
         } catch (err) {
@@ -154,6 +175,7 @@ const Checkout = () => {
                                 </h2>
                                 <div className="space-y-4">
                                     <FormInput label="Full Name" id="fullName" name="fullName" value={shippingAddress.fullName} onChange={handleAddressChange} error={addressErrors.fullName} />
+                                    <FormInput label="Mobile Number" id="phone" name="phone" value={shippingAddress.phone} onChange={handleAddressChange} error={addressErrors.phone} />
                                     <FormInput label="Address Line 1" id="addressLine1" name="addressLine1" value={shippingAddress.addressLine1} onChange={handleAddressChange} error={addressErrors.addressLine1} />
                                     <FormInput label="Address Line 2" id="addressLine2" name="addressLine2" value={shippingAddress.addressLine2} onChange={handleAddressChange} isOptional={true} required={false} />
                                     <div className="grid grid-cols-2 gap-4">
@@ -239,7 +261,7 @@ const Checkout = () => {
                     </div>
                 </form>
             </div>
-            <OrderPlacedModal isOpen={isModalOpen} onClose={handleCloseModal} />
+            <OrderPlacedModal isOpen={isModalOpen} onClose={handleCloseModal} orderId={placedOrderId} />
         </>
     );
 };

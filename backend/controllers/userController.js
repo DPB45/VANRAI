@@ -35,7 +35,11 @@ const registerUser = asyncHandler(async (req, res) => {
      throw new Error('Please fill in all fields.');
   }
 
-  const userExists = await User.findOne({ email });
+  // The schema's lowercase:true only normalizes on save, not on query
+  // filters, so this lookup must lowercase explicitly or "A@x.com" would
+  // slip past a check for an existing "a@x.com".
+  const normalizedEmail = email.toLowerCase().trim();
+  const userExists = await User.findOne({ email: normalizedEmail });
   if (userExists) {
     res.status(400);
     throw new Error('User already exists with this email.');
@@ -76,7 +80,7 @@ const authUser = asyncHandler(async (req, res) => {
       throw new Error('Please enter a valid email and password.');
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: email.toLowerCase().trim() });
 
   if (user && (await user.matchPassword(password))) {
 
@@ -88,12 +92,22 @@ const authUser = asyncHandler(async (req, res) => {
       user.twoFactorCodeExpire = Date.now() + 10 * 60 * 1000; // 10 mins
       await user.save();
 
-      await sendEmail({
+      const emailSent = await sendEmail({
         to: user.email,
         subject: 'Your 2FA Login Code',
         text: `Your login code is ${code}`,
         html: `<h2>Vanrai Spices Login</h2><p>Your authentication code is: <b>${code}</b></p><p>This code expires in 10 minutes.</p>`
       });
+
+      if (!emailSent) {
+        // Don't leave a dangling code the user can never actually receive —
+        // and don't tell them a code is on its way when it isn't.
+        user.twoFactorCode = undefined;
+        user.twoFactorCodeExpire = undefined;
+        await user.save();
+        res.status(500);
+        throw new Error('Failed to send your login code. Please try again.');
+      }
 
       res.json({
         twoFactorRequired: true,
@@ -154,7 +168,18 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
   if (user) {
     user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
+
+    if (req.body.email) {
+      const normalizedEmail = req.body.email.toLowerCase().trim();
+      if (normalizedEmail !== user.email) {
+        const emailTaken = await User.findOne({ email: normalizedEmail });
+        if (emailTaken) {
+          res.status(400);
+          throw new Error('That email is already in use by another account.');
+        }
+        user.email = normalizedEmail;
+      }
+    }
 
     if (req.body.password) {
        user.password = req.body.password;
@@ -203,7 +228,7 @@ const toggleTwoFactor = asyncHandler(async (req, res) => {
 const requestPasswordReset = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: (email || '').toLowerCase().trim() });
 
   if (user) {
     // Generate a raw token to email to the user...

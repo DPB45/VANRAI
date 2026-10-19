@@ -7,6 +7,20 @@ const sampleProducts = [
   // ... add other samples if you wish ...
 ];
 
+// Escapes regex metacharacters (., *, +, ?, (, ), etc.) in user-supplied
+// search text before it's used in a $regex filter. Without this, a crafted
+// keyword like "(a+)+$" can make MongoDB's regex engine do catastrophic
+// backtracking on every document scanned — a classic ReDoS that can hang
+// the query (and the connection pool) for every other request.
+const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Express's query-string parser turns a repeated param (?category=A&category=B)
+// into an array instead of a string. Several spots below used to call
+// string methods (like .split) directly on req.query.<field>, which threw
+// a TypeError — and therefore a 500 — the moment a param was repeated or a
+// browser/proxy sent it twice. This normalizes either shape to one string.
+const firstQueryValue = (value) => (Array.isArray(value) ? value[0] : value);
+
 export const seedProducts = asyncHandler(async () => {
     if (process.env.NODE_ENV !== 'production') {
         const count = await Product.countDocuments();
@@ -30,12 +44,14 @@ const getProducts = asyncHandler(async (req, res) => {
 
     const filter = {};
 
-    if (req.query.keyword) {
-        filter.name = { $regex: req.query.keyword, $options: 'i' };
+    const keyword = firstQueryValue(req.query.keyword);
+    if (keyword) {
+        filter.name = { $regex: escapeRegExp(keyword), $options: 'i' };
     }
 
-    if (req.query.category) {
-        const categories = req.query.category
+    const categoryParam = firstQueryValue(req.query.category);
+    if (categoryParam) {
+        const categories = categoryParam
             .split(',')
             .map((c) => c.trim())
             .filter(Boolean);
@@ -44,16 +60,18 @@ const getProducts = asyncHandler(async (req, res) => {
         }
     }
 
-    if (req.query.maxPrice) {
-        const maxPrice = Number(req.query.maxPrice);
+    const maxPriceParam = firstQueryValue(req.query.maxPrice);
+    if (maxPriceParam) {
+        const maxPrice = Number(maxPriceParam);
         if (!Number.isNaN(maxPrice)) {
             filter.price = { $lte: maxPrice };
         }
     }
 
-    if (req.query.inStock === 'true') {
+    const inStockParam = firstQueryValue(req.query.inStock);
+    if (inStockParam === 'true') {
         filter.inStock = true;
-    } else if (req.query.inStock === 'false') {
+    } else if (inStockParam === 'false') {
         filter.inStock = false;
     }
 
@@ -101,10 +119,10 @@ const createProduct = asyncHandler(async (req, res) => {
     name: name || 'Sample Name',
     price: price ?? 0,
     user: req.user._id,
-    imageUrl: imageUrl || '/images/placeholder.jpg',
+    imageUrl: imageUrl || '/images/placeholder.png',
     category: category || 'Sample Category',
     description: description || 'Sample description',
-    inStock: inStock ?? true,
+    inStock: inStock ?? false, // new products stay unbuyable until an admin explicitly marks them in stock
     weight: weight || '',
     rating: 0,
     numReviews: 0,
@@ -152,6 +170,13 @@ const deleteProduct = asyncHandler(async (req, res) => {
 // @desc    Create a new review
 const createProductReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
+  const numericRating = Number(rating);
+
+  if (!rating || Number.isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+    res.status(400);
+    throw new Error('Rating must be a number between 1 and 5.');
+  }
+
   const product = await Product.findById(req.params.id);
 
   if (product) {
@@ -166,7 +191,7 @@ const createProductReview = asyncHandler(async (req, res) => {
 
     const review = {
       name: req.user.name,
-      rating: Number(rating),
+      rating: numericRating,
       comment: comment,
       user: req.user._id,
     };
@@ -187,6 +212,13 @@ const createProductReview = asyncHandler(async (req, res) => {
 // @route   PUT /api/products/:id/reviews
 const updateProductReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
+  const numericRating = Number(rating);
+
+  if (!rating || Number.isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+    res.status(400);
+    throw new Error('Rating must be a number between 1 and 5.');
+  }
+
   const product = await Product.findById(req.params.id);
 
   if (product) {
@@ -195,7 +227,7 @@ const updateProductReview = asyncHandler(async (req, res) => {
     );
 
     if (review) {
-      review.rating = Number(rating);
+      review.rating = numericRating;
       review.comment = comment;
 
       await product.save();

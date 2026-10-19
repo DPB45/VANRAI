@@ -1,3 +1,5 @@
+import typography from '@tailwindcss/typography';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -24,5 +26,6 @@ export default {
       },
     },
   },
-  plugins: [],
+  // typography provides the `prose` classes used on the Help Center and recipe pages.
+  plugins: [typography],
 }

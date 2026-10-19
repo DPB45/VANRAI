@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
-const OrderPlacedModal = ({ isOpen, onClose }) => {
+const OrderPlacedModal = ({ isOpen, onClose, orderId }) => {
   if (!isOpen) return null;
 
   return (
@@ -28,11 +28,18 @@ const OrderPlacedModal = ({ isOpen, onClose }) => {
           Vanrai Spices. Your order will be delivered soon.
         </p>
 
+        {orderId && (
+          <p className="text-sm text-gray-500 mb-6">
+            Order number:{' '}
+            <span className="font-semibold text-gray-800">#{orderId.slice(-8).toUpperCase()}</span>
+          </p>
+        )}
+
         {/* Action Button */}
         <Link
           to="/shop"
           onClick={onClose}
-          className="w-full bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors"
+          className="inline-block w-full bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors text-center"
         >
           Continue Shopping
         </Link>

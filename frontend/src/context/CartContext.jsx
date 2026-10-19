@@ -41,8 +41,17 @@ export const CartProvider = ({ children }) => {
             : item
         );
       } else {
-        // If new item, add it to the cart
-        return [...prevItems, { ...product, quantity: quantity }];
+        // Only keep what the cart/checkout UI displays and what the order
+        // request needs — not the entire product document. The full product
+        // (as fetched for display) also carries its complete `reviews` array,
+        // `numReviews`, timestamps, etc., which has no reason to be
+        // duplicated into every cart line item and persisted to
+        // localStorage. The backend independently re-looks-up price/stock
+        // by _id when the order is actually placed, so nothing here is
+        // trusted for billing anyway — this is purely about not bloating
+        // the stored cart with data that's irrelevant to it.
+        const { _id, name, price, imageUrl, category, weight, inStock } = product;
+        return [...prevItems, { _id, name, price, imageUrl, category, weight, inStock, quantity }];
       }
     });
   };

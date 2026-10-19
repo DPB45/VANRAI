@@ -56,7 +56,10 @@ const ProductList = () => {
               price: 0,
               description: 'Sample description',
               category: 'Masalas',
-              inStock: true
+              // Created as a hidden-from-checkout draft: out of stock means
+              // nobody can buy the ₹0 placeholder if the admin abandons the
+              // edit screen. Tick "In Stock" once the real details are saved.
+              inStock: false
           }, config);
 
           // Redirect to the edit screen for this new product

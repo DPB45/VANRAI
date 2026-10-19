@@ -134,9 +134,20 @@ const Shop = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryQueryParam, sortByQueryParam]);
 
-  // Builds a /shop URL that preserves the keyword, only changing the page
-  // number. Used by the Pagination component.
-  const buildPageUrl = (pageNum) => `/shop?keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNum}`;
+  // Builds a /shop URL that preserves keyword, category and sortBy, only
+  // changing the page number. Previously this only kept `keyword`, so
+  // visiting e.g. /shop?category=Masalas and then clicking "page 2" would
+  // silently drop the category from the URL — which the resync effect
+  // below then read as "filter cleared" and wiped it from currentFilters
+  // too, even though the sidebar still visually showed it checked.
+  const buildPageUrl = (pageNum) => {
+    const params = new URLSearchParams();
+    params.set('keyword', keyword);
+    params.set('pageNumber', pageNum);
+    if (categoryQueryParam) params.set('category', categoryQueryParam);
+    if (sortByQueryParam) params.set('sortBy', sortByQueryParam);
+    return `/shop?${params.toString()}`;
+  };
 
   // --- Fetch Products from the server with search, filters, sort & pagination ---
   useEffect(() => {
@@ -216,7 +227,15 @@ const Shop = () => {
       <div className="flex flex-col lg:flex-row">
 
         {/* 1. Filters Sidebar */}
-        <FiltersSidebar onFilterChange={handleFilterChange} currentFilters={currentFilters} />
+        {/* key={categoryQueryParam} forces a remount (re-reading currentFilters
+            fresh) whenever the URL's category changes from outside the sidebar
+            itself (e.g. a footer link, or pagination now preserving it per
+            buildPageUrl above) — the sidebar only initializes its checkbox
+            state once internally, so without this it would silently go stale
+            relative to what's actually being fetched. The sidebar's own
+            onFilterChange never writes back to the URL, so this never remounts
+            mid-interaction from the user's own clicks. */}
+        <FiltersSidebar key={categoryQueryParam || 'all'} onFilterChange={handleFilterChange} currentFilters={currentFilters} />
 
         {/* 2. Main Content & Product Grid */}
         <main className="w-full lg:w-3/4">

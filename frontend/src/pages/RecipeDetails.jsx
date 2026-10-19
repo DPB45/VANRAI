@@ -16,7 +16,7 @@ const RecipeContent = ({ recipe }) => {
 
       {/* 1. Show Video if it's real */}
       {hasVideo && (
-        <div className="aspect-w-16 aspect-h-9 mb-12 rounded-lg overflow-hidden shadow-lg">
+        <div className="aspect-video mb-12 rounded-lg overflow-hidden shadow-lg">
           <iframe
             src={recipe.content.videoUrl}
             title={recipe.title}

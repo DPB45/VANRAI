@@ -14,7 +14,12 @@ const addressSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  // lowercase: true normalizes on save so "A@x.com" and "a@x.com" can't
+  // register as two different accounts; trim strips accidental whitespace
+  // from a pasted email. Queries still need to lowercase their own input
+  // (see authUser/registerUser/requestPasswordReset) since this only
+  // applies when a document is written, not to a query's filter.
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   isAdmin: { type: Boolean, required: true, default: false },
 

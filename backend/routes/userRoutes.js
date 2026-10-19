@@ -1,7 +1,20 @@
 import express from 'express';
 // 1. Import check for validation chains and validationResult for error checking
 import { check, validationResult } from 'express-validator';
+import rateLimit from 'express-rate-limit';
 const router = express.Router();
+
+// The global limiter in server.js (100 req/15min) is far too loose for
+// endpoints that are realistic brute-force targets: a login password guess,
+// a 6-digit 2FA code (1,000,000 possibilities), or spamming password-reset
+// emails at someone. This caps those specifically, much tighter.
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Too many attempts. Please wait a few minutes and try again.',
+});
 import {
     registerUser,
     authUser,
@@ -49,6 +62,7 @@ router.post(
 // 2. Login User (Step 1)
 router.post(
     '/login',
+    authLimiter,
     [
         check('email', 'Invalid email format').isEmail(),
         check('password', 'Password is required').notEmpty(),
@@ -58,11 +72,12 @@ router.post(
 );
 
 // 3. Verify 2FA Code (Step 2 of Login)
-router.post('/login/verify2fa', verifyTwoFactorLogin); // <-- NEW ROUTE
+router.post('/login/verify2fa', authLimiter, verifyTwoFactorLogin); // <-- NEW ROUTE
 
 // 4. Forgot Password Request
 router.post(
     '/forgotpassword',
+    authLimiter,
     [check('email', 'Invalid email format').isEmail()],
     validate,
     requestPasswordReset
