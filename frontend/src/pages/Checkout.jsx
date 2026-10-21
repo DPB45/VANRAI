@@ -27,6 +27,20 @@ const FormInput = ({ label, id, name, value, onChange, error, isOptional = false
     </div>
 );
 
+// Fill the form from a saved address, keeping what's already typed for any
+// field the saved address doesn't have (older addresses have no phone).
+const applySaved = (prev, a) => ({
+    ...prev,
+    fullName: a.fullName || prev.fullName,
+    phone: a.phone || prev.phone,
+    addressLine1: a.addressLine1 || '',
+    addressLine2: a.addressLine2 || '',
+    city: a.city || '',
+    state: a.state || '',
+    postalCode: a.postalCode || '',
+    country: a.country || 'India',
+});
+
 const Checkout = () => {
     // 2. Get removeFromCart from context
     const { cartItems, subtotal, shipping, total, clearCart, removeFromCart, refreshCart } = useCart();
@@ -63,6 +77,32 @@ const Checkout = () => {
     useEffect(() => {
         try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(shippingAddress)); } catch { /* ignore */ }
     }, [shippingAddress]);
+
+    // Saved addresses from the account, offered as a one-click prefill.
+    const [savedAddresses, setSavedAddresses] = useState([]);
+    useEffect(() => {
+        if (!userInfo) return;
+        let cancelled = false;
+        axios
+            .get('/api/users/addresses', { headers: { Authorization: `Bearer ${userInfo.token}` } })
+            .then(({ data }) => {
+                if (cancelled || !Array.isArray(data)) return;
+                setSavedAddresses(data);
+                // If nothing has been typed yet, start from the default address.
+                const def = data.find((a) => a.isDefault);
+                setShippingAddress((prev) => (def && prev.addressLine1.trim() === '' ? applySaved(prev, def) : prev));
+            })
+            .catch(() => { /* saved addresses are a convenience; ignore failures */ });
+        return () => { cancelled = true; };
+    }, [userInfo]);
+
+    const handleUseSaved = (e) => {
+        const chosen = savedAddresses.find((a) => a._id === e.target.value);
+        if (chosen) {
+            setShippingAddress((prev) => applySaved(prev, chosen));
+            setAddressErrors({});
+        }
+    };
 
     // Re-sync prices/stock with the server before the shopper commits to a total.
     useEffect(() => {
@@ -179,6 +219,24 @@ const Checkout = () => {
                                     Delivery Address
                                 </h2>
                                 <div className="space-y-4">
+                                    {savedAddresses.length > 0 && (
+                                        <div>
+                                            <label htmlFor="savedAddress" className="block text-sm font-medium text-gray-700 mb-1">Use a saved address</label>
+                                            <select
+                                                id="savedAddress"
+                                                defaultValue=""
+                                                onChange={handleUseSaved}
+                                                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            >
+                                                <option value="" disabled>Choose a saved address…</option>
+                                                {savedAddresses.map((a) => (
+                                                    <option key={a._id} value={a._id}>
+                                                        {a.fullName} — {a.addressLine1}, {a.city} {a.postalCode}{a.isDefault ? ' (default)' : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                                     <FormInput label="Full Name" id="fullName" name="fullName" value={shippingAddress.fullName} onChange={handleAddressChange} error={addressErrors.fullName} />
                                     <FormInput label="Mobile Number" id="phone" name="phone" value={shippingAddress.phone} onChange={handleAddressChange} error={addressErrors.phone} />
                                     <FormInput label="Address Line 1" id="addressLine1" name="addressLine1" value={shippingAddress.addressLine1} onChange={handleAddressChange} error={addressErrors.addressLine1} />

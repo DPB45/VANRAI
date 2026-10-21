@@ -13,6 +13,12 @@ const protect = asyncHandler(async (req, res, next) => {
          res.status(401);
          throw new Error('Not authorized, user not found');
       }
+      // Tokens issued before a password change/reset are no longer valid.
+      // (Tokens from before this feature have no `v`; they count as version 0.)
+      if ((decoded.v ?? 0) !== (req.user.tokenVersion ?? 0)) {
+         res.status(401);
+         throw new Error('Session expired, please log in again');
+      }
       next();
     } catch (error) {
       console.error(error);

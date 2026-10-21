@@ -16,7 +16,7 @@ const router = express.Router();
 const buildLimiter = (max, message, skipSuccessfulRequests = false) =>
     rateLimit({
         windowMs: 15 * 60 * 1000,
-        max,
+        limit: max,
         standardHeaders: true,
         legacyHeaders: false,
         skipSuccessfulRequests, // only failed attempts count toward the cap

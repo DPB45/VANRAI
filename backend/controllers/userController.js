@@ -22,12 +22,12 @@ const findUserByEmail = async (rawEmail) => {
 };
 
 // Helper to generate JWT
-const generateToken = (id) => {
+const generateToken = (user) => {
   if (!process.env.JWT_SECRET) {
     console.error('FATAL ERROR: JWT_SECRET is not defined.');
     process.exit(1);
   }
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id: user._id, v: user.tokenVersion || 0 }, process.env.JWT_SECRET, {
     expiresIn: '30d',
   });
 };
@@ -77,7 +77,7 @@ const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       isAdmin: user.isAdmin,
-      token: generateToken(user._id),
+      token: generateToken(user),
     });
   } else {
     res.status(400);
@@ -140,7 +140,7 @@ const authUser = asyncHandler(async (req, res) => {
       email: user.email,
       isAdmin: user.isAdmin,
       isTwoFactorEnabled: user.isTwoFactorEnabled,
-      token: generateToken(user._id),
+      token: generateToken(user),
     });
   } else {
     res.status(401);
@@ -178,7 +178,7 @@ const verifyTwoFactorLogin = asyncHandler(async (req, res) => {
       email: user.email,
       isAdmin: user.isAdmin,
       isTwoFactorEnabled: user.isTwoFactorEnabled,
-      token: generateToken(user._id),
+      token: generateToken(user),
     });
     return;
   }
@@ -231,7 +231,10 @@ const updateUserProfile = asyncHandler(async (req, res) => {
       const normalizedEmail = req.body.email.toLowerCase().trim();
       if (normalizedEmail !== user.email) {
         const emailTaken = await findUserByEmail(normalizedEmail);
-        if (emailTaken) {
+        // findUserByEmail is case-insensitive, so for a not-yet-migrated
+        // account stored as "Name@X.com" it finds the user THEMSELVES —
+        // that is not a duplicate.
+        if (emailTaken && !emailTaken._id.equals(user._id)) {
           res.status(400);
           throw new Error('That email is already in use by another account.');
         }
@@ -251,7 +254,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
       isTwoFactorEnabled: updatedUser.isTwoFactorEnabled,
-      token: generateToken(updatedUser._id),
+      token: generateToken(updatedUser),
     });
   } else {
     res.status(404);
@@ -467,11 +470,15 @@ const getAddresses = asyncHandler(async (req, res) => {
 // @route   POST /api/users/addresses
 // @access  Private
 const addAddress = asyncHandler(async (req, res) => {
-  const { fullName, addressLine1, addressLine2, city, state, postalCode, country, isDefault } = req.body;
+  const { fullName, addressLine1, addressLine2, city, state, postalCode, country, isDefault, phone } = req.body;
 
   if (!fullName || !addressLine1 || !city || !state || !postalCode) {
     res.status(400);
     throw new Error('Please fill in all required address fields.');
+  }
+  if (phone && !/^[6-9]\d{9}$/.test(String(phone).trim())) {
+    res.status(400);
+    throw new Error('Enter a valid 10-digit mobile number.');
   }
 
   const user = await User.findById(req.user._id);
@@ -492,6 +499,7 @@ const addAddress = asyncHandler(async (req, res) => {
     city,
     state,
     postalCode,
+    phone: phone ? String(phone).trim() : undefined,
     country: country || 'India',
     isDefault: !!isDefault || user.addresses.length === 0, // first address defaults to true
   });
@@ -516,7 +524,12 @@ const updateAddress = asyncHandler(async (req, res) => {
     throw new Error('Address not found');
   }
 
-  const { fullName, addressLine1, addressLine2, city, state, postalCode, country, isDefault } = req.body;
+  const { fullName, addressLine1, addressLine2, city, state, postalCode, country, isDefault, phone } = req.body;
+
+  if (phone && !/^[6-9]\d{9}$/.test(String(phone).trim())) {
+    res.status(400);
+    throw new Error('Enter a valid 10-digit mobile number.');
+  }
 
   address.fullName = fullName || address.fullName;
   address.addressLine1 = addressLine1 || address.addressLine1;
@@ -525,6 +538,7 @@ const updateAddress = asyncHandler(async (req, res) => {
   address.state = state || address.state;
   address.postalCode = postalCode || address.postalCode;
   address.country = country || address.country;
+  if (phone !== undefined) address.phone = phone ? String(phone).trim() : undefined;
 
   if (isDefault) {
     user.addresses.forEach((addr) => { addr.isDefault = false; });

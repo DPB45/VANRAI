@@ -33,6 +33,10 @@ const createMessage = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Invalid email format.');
   }
+  if (String(name).length > 100 || String(subject).length > 200 || String(message).length > 5000) {
+    res.status(400);
+    throw new Error('Your name, subject or message is too long.');
+  }
 
   // Store exactly what the visitor typed — no mangling. React escapes it
   // automatically wherever it's rendered in the admin UI, so there's no

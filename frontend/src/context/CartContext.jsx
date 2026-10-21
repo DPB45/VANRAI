@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 // 1. Create the Context
 const CartContext = createContext();
@@ -87,33 +88,51 @@ export const CartProvider = ({ children }) => {
   // Re-sync every cart line with the live product (price, name, image, stock).
   // Prices are snapshotted when an item is added, but the server always bills
   // the CURRENT price, so without this the shopper can see one total and be
-  // charged another. Products that no longer exist are dropped.
+  // charged another. Products that no longer exist are dropped, and the
+  // shopper is told.
+  //
+  // One batch request (not one per line), and at most once per minute, so
+  // moving between Cart and Checkout can't eat into the API rate limit.
+  const lastRefreshRef = useRef(0);
   const refreshCart = useCallback(async () => {
     const snapshot = JSON.parse(localStorage.getItem('vanraiCart') || '[]');
     if (snapshot.length === 0) return;
+    if (Date.now() - lastRefreshRef.current < 60 * 1000) return;
+    lastRefreshRef.current = Date.now();
 
-    const results = await Promise.all(
-      snapshot.map(async (item) => {
-        try {
-          const { data } = await axios.get(`/api/products/${item._id}`);
-          return { item, product: data, gone: false };
-        } catch (err) {
-          const gone = err.response?.status === 404;
-          return { item, product: null, gone };
-        }
-      })
-    );
+    let products;
+    try {
+      const ids = snapshot.map((item) => item._id).join(',');
+      const { data } = await axios.get('/api/products', { params: { ids } });
+      products = data.products;
+    } catch {
+      lastRefreshRef.current = 0; // let the next visit retry
+      return; // network/rate-limit problem: keep the cart as-is
+    }
+
+    const byId = new Map(products.map((p) => [p._id, p]));
+    // Worked out from the snapshot (not inside the state updater below, which
+    // React may run later or twice) so the notice is always accurate.
+    const removedNames = snapshot.filter((item) => !byId.has(item._id)).map((item) => item.name);
 
     setCartItems((prev) =>
       prev
         .map((line) => {
-          const match = results.find((r) => r.item._id === line._id);
-          if (!match || !match.product) return match?.gone ? null : line;
-          const { name, price, imageUrl, category, weight, inStock } = match.product;
+          const live = byId.get(line._id);
+          // Only drop lines that were part of the refreshed snapshot; an item
+          // added while the request was in flight must survive.
+          if (!live) return snapshot.some((i) => i._id === line._id) ? null : line;
+          const { name, price, imageUrl, category, weight, inStock } = live;
           return { ...line, name, price, imageUrl, category, weight, inStock };
         })
         .filter(Boolean)
     );
+
+    if (removedNames.length > 0) {
+      toast.error(
+        `${removedNames.join(', ')} ${removedNames.length > 1 ? 'are' : 'is'} no longer available and ${removedNames.length > 1 ? 'were' : 'was'} removed from your cart.`
+      );
+    }
   }, []);
 
   // --- Calculations ---

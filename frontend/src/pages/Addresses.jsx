@@ -33,6 +33,7 @@ const AddressForm = ({ initialData, onSave, onCancel, saving }) => {
             city: formData.get('city'),
             state: formData.get('state'),
             postalCode: formData.get('postalCode'),
+            phone: (formData.get('phone') || '').trim(),
             country: 'India', // Hardcoded for now
         };
         onSave(addressData);
@@ -52,6 +53,7 @@ const AddressForm = ({ initialData, onSave, onCancel, saving }) => {
                 <FormInput id="city" label="City" placeholder="Mumbai" defaultValue={initialData?.city} />
                 <FormInput id="state" label="State" placeholder="Maharashtra" defaultValue={initialData?.state} />
                 <FormInput id="postalCode" label="Postal Code" placeholder="400001" defaultValue={initialData?.postalCode} />
+                <FormInput id="phone" label="Mobile Number (used for delivery)" placeholder="9876543210" required={false} defaultValue={initialData?.phone} />
             </div>
 
             <div className="flex justify-end gap-4 pt-4">
@@ -226,6 +228,7 @@ const Addresses = () => {
                                 <p className="text-gray-600">{address.addressLine1}{address.addressLine2 ? `, ${address.addressLine2}` : ''}</p>
                                 <p className="text-gray-600">{address.city}, {address.state} {address.postalCode}</p>
                                 <p className="text-gray-600">{address.country}</p>
+                                {address.phone && <p className="text-gray-600">Phone: {address.phone}</p>}
 
                                 <div className="mt-4 space-x-4 flex">
                                     <button

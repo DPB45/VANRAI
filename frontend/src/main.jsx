@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import axios from 'axios'; // <-- Import axios
+import toast from 'react-hot-toast';
 import App from './App.jsx';
 import './index.css';
 import './i18n';
@@ -26,6 +27,9 @@ if (import.meta.env.VITE_API_URL) {
 // authorized" errors while the UI still looked logged in. Clear the stale
 // session and send the user to log in once, instead. Login attempts
 // themselves also return 401 (wrong password), so those are excluded.
+// Several requests often fail together when a token expires; handle it once.
+let handlingExpiredSession = false;
+
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -33,17 +37,26 @@ axios.interceptors.response.use(
     const url = error.config?.url || '';
     const hadToken = Boolean(error.config?.headers?.Authorization);
     const isLoginCall = /\/users\/(login|register)/.test(url);
-    if (status === 401 && hadToken && !isLoginCall) {
+    if (status === 401 && hadToken && !isLoginCall && !handlingExpiredSession) {
+      handlingExpiredSession = true;
       localStorage.removeItem('userInfo');
       const path = window.location.pathname;
       const needsLogin = /^\/(account|admin|checkout|order|wishlist)/.test(path);
-      if (needsLogin) {
-        window.location.assign('/login');
-      } else if (path !== '/login') {
-        // Public page (e.g. a stale token tripped the background wishlist
-        // fetch): quietly drop the dead session instead of throwing the
-        // visitor to the login screen.
-        window.location.reload();
+      if (path !== '/login') {
+        // Say why first, then move on after a beat, so a shopper who was
+        // mid-action understands what happened instead of losing it silently.
+        toast.error('Your session expired. Please log in again.');
+        setTimeout(() => {
+          if (needsLogin) {
+            window.location.assign('/login');
+          } else {
+            // Public page (e.g. a stale token tripped the background wishlist
+            // fetch): just drop the dead session, no login screen needed.
+            window.location.reload();
+          }
+        }, 1800);
+      } else {
+        handlingExpiredSession = false; // already on the login page
       }
     }
     return Promise.reject(error);

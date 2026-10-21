@@ -18,6 +18,9 @@ const CartItem = ({ item }) => {
         <div className="ml-6">
           <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
           <p className="text-gray-500">{item.weight || item.category}</p>
+          {item.inStock === false && (
+            <p className="text-sm font-semibold text-red-600 mt-1">Out of stock — remove this item to continue</p>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-8">

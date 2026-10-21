@@ -10,6 +10,7 @@ const addressSchema = new mongoose.Schema({
   postalCode: { type: String, required: true },
   country: { type: String, required: true, default: 'India' },
   isDefault: { type: Boolean, default: false },
+  phone: { type: String },
 });
 
 const userSchema = new mongoose.Schema({
@@ -29,6 +30,9 @@ const userSchema = new mongoose.Schema({
   twoFactorCodeExpire: { type: Date },
   // Failed guesses against the current 2FA code; the code is burned after too many.
   twoFactorAttempts: { type: Number, default: 0 },
+  // Bumped whenever the password changes. Tokens carry the version they were
+  // issued under, so changing/resetting a password logs out every other session.
+  tokenVersion: { type: Number, default: 0 },
   // ----------------------
 
   // --- PASSWORD RESET (real implementation) ---
@@ -48,6 +52,7 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
+  if (!this.isNew) this.tokenVersion = (this.tokenVersion || 0) + 1;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();

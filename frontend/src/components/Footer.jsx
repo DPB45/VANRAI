@@ -6,7 +6,7 @@ import { FaFacebookF, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/f
 // are simply not rendered, so visitors never see icons that go nowhere.
 const SOCIAL_LINKS = [
   { href: '', label: 'Facebook', Icon: FaFacebookF },
-  { href: 'https://www.instagram.com/vanraispices?obrf=MXJia3MybGgyMzhpaQ==', label: 'Instagram', Icon: FaInstagram },
+  { href: 'https://www.instagram.com/vanraispices', label: 'Instagram', Icon: FaInstagram },
   { href: '', label: 'LinkedIn', Icon: FaLinkedinIn },
   { href: 'https://www.youtube.com/@vanraispices', label: 'YouTube', Icon: FaYoutube },
 ].filter((social) => social.href);

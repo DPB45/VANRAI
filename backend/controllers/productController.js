@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Product from '../models/productModel.js';
 import asyncHandler from 'express-async-handler';
 
@@ -45,6 +46,19 @@ const getProducts = asyncHandler(async (req, res) => {
     const requestedPageSize = Number(req.query.pageSize) || 8;
     const pageSize = Math.min(Math.max(requestedPageSize, 1), 200);
     const page = Math.max(1, Math.floor(Number(firstQueryValue(req.query.pageNumber))) || 1);
+
+    // Batch lookup (used by the cart to refresh prices/stock in ONE request
+    // instead of one request per cart line): /api/products?ids=a,b,c
+    const idsParam = firstQueryValue(req.query.ids);
+    if (idsParam) {
+        const ids = idsParam.split(',').map((i) => i.trim()).filter(Boolean).slice(0, 50);
+        if (!ids.every((id) => mongoose.isValidObjectId(id))) {
+            res.status(400);
+            throw new Error('Invalid product id in ids.');
+        }
+        const found = await Product.find({ _id: { $in: ids } }).select('-reviews');
+        return res.json({ products: found, page: 1, pages: 1, totalProducts: found.length });
+    }
 
     const filter = {};
 
@@ -184,6 +198,10 @@ const createProductReview = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Please write a short comment with your rating.');
   }
+  if (comment.length > 1000) {
+    res.status(400);
+    throw new Error('Comments can be at most 1000 characters.');
+  }
 
   const product = await Product.findById(req.params.id);
 
@@ -229,6 +247,10 @@ const updateProductReview = asyncHandler(async (req, res) => {
   if (typeof comment !== 'string' || !comment.trim()) {
     res.status(400);
     throw new Error('Please write a short comment with your rating.');
+  }
+  if (comment.length > 1000) {
+    res.status(400);
+    throw new Error('Comments can be at most 1000 characters.');
   }
 
   const product = await Product.findById(req.params.id);
