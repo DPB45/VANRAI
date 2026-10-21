@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext'; // Import the custom hook
 import { PlusIcon, MinusIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -55,7 +55,13 @@ const CartItem = ({ item }) => {
 
 // This is the main Cart page component
 const Cart = () => {
-  const { cartItems, subtotal, shipping, total, itemCount } = useCart();
+  const { cartItems, subtotal, shipping, total, itemCount, refreshCart } = useCart();
+
+  // Pull the latest prices/stock when the cart is opened so the totals shown
+  // match what the server will actually charge.
+  useEffect(() => {
+    refreshCart();
+  }, [refreshCart]);
 
   if (itemCount === 0) {
     return (

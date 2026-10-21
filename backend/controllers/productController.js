@@ -19,7 +19,11 @@ const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // string methods (like .split) directly on req.query.<field>, which threw
 // a TypeError — and therefore a 500 — the moment a param was repeated or a
 // browser/proxy sent it twice. This normalizes either shape to one string.
-const firstQueryValue = (value) => (Array.isArray(value) ? value[0] : value);
+const firstQueryValue = (value) => {
+  const first = Array.isArray(value) ? value[0] : value;
+  // ?keyword[a]=1 parses to an object; only plain strings are usable here.
+  return typeof first === 'string' ? first : undefined;
+};
 
 export const seedProducts = asyncHandler(async () => {
     if (process.env.NODE_ENV !== 'production') {
@@ -40,7 +44,7 @@ const getProducts = asyncHandler(async (req, res) => {
     // one uncapped request.
     const requestedPageSize = Number(req.query.pageSize) || 8;
     const pageSize = Math.min(Math.max(requestedPageSize, 1), 200);
-    const page = Number(req.query.pageNumber) || 1;
+    const page = Math.max(1, Math.floor(Number(firstQueryValue(req.query.pageNumber))) || 1);
 
     const filter = {};
 
@@ -176,6 +180,10 @@ const createProductReview = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Rating must be a number between 1 and 5.');
   }
+  if (typeof comment !== 'string' || !comment.trim()) {
+    res.status(400);
+    throw new Error('Please write a short comment with your rating.');
+  }
 
   const product = await Product.findById(req.params.id);
 
@@ -217,6 +225,10 @@ const updateProductReview = asyncHandler(async (req, res) => {
   if (!rating || Number.isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
     res.status(400);
     throw new Error('Rating must be a number between 1 and 5.');
+  }
+  if (typeof comment !== 'string' || !comment.trim()) {
+    res.status(400);
+    throw new Error('Please write a short comment with your rating.');
   }
 
   const product = await Product.findById(req.params.id);

@@ -8,7 +8,7 @@ const SOCIAL_LINKS = [
   { href: '', label: 'Facebook', Icon: FaFacebookF },
   { href: 'https://www.instagram.com/vanraispices?obrf=MXJia3MybGgyMzhpaQ==', label: 'Instagram', Icon: FaInstagram },
   { href: '', label: 'LinkedIn', Icon: FaLinkedinIn },
-  { href: '', label: 'YouTube', Icon: FaYoutube },
+  { href: 'https://www.youtube.com/@vanraispices', label: 'YouTube', Icon: FaYoutube },
 ].filter((social) => social.href);
 
 // One column of footer nav links, sharing the same heading treatment so

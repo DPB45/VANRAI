@@ -93,7 +93,7 @@ const OrderDetails = () => {
             toast.success('Order status updated!');
             fetchOrderDetails(); // Refresh data
         } catch (err) {
-            toast.error('Failed to update status.');
+            toast.error(err.response?.data?.message || 'Failed to update status.');
         }
     };
 

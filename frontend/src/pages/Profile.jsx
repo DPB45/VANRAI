@@ -8,6 +8,8 @@ const Profile = () => {
   const { userInfo, login } = useUser();
   const [name, setName] = useState(userInfo?.name || '');
   const [email, setEmail] = useState(userInfo?.email || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const emailChanged = email.trim().toLowerCase() !== (userInfo?.email || '').toLowerCase();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -44,11 +46,12 @@ const Profile = () => {
       // Send PUT request to update profile (excluding password)
       const { data } = await axios.put(
         '/api/users/profile',
-        { name, email }, // Send updated name and email
+        { name, email, ...(emailChanged ? { currentPassword } : {}) }, // Changing email needs the current password
         config
       );
 
       setMessage('Profile updated successfully!');
+      setCurrentPassword('');
       login(data); // Update user info in context/local storage
       setLoading(false);
 
@@ -102,6 +105,21 @@ const Profile = () => {
             required
           />
         </div>
+
+        {emailChanged && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="profileCurrentPassword">Current Password</label>
+            <input
+              type="password"
+              id="profileCurrentPassword"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Required to change your email"
+              required
+            />
+          </div>
+        )}
 
         <div className="pt-4">
           <button

@@ -27,6 +27,8 @@ const userSchema = new mongoose.Schema({
   isTwoFactorEnabled: { type: Boolean, default: false },
   twoFactorCode: { type: String },
   twoFactorCodeExpire: { type: Date },
+  // Failed guesses against the current 2FA code; the code is burned after too many.
+  twoFactorAttempts: { type: Number, default: 0 },
   // ----------------------
 
   // --- PASSWORD RESET (real implementation) ---

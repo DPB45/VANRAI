@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useUser } from '../context/UserContext';
@@ -10,7 +10,15 @@ const Wishlist = () => {
     const [fetchedItems, setWishlistItems] = useState([]);
     // Items un-hearted on this page disappear immediately (the heart toggles
     // shared context state) instead of lingering until the next reload.
-    const wishlistItems = fetchedItems.filter((p) => isInWishlist(p._id));
+    // Only hide an item once we have SEEN it hearted and it is now un-hearted.
+    // Filtering purely on context membership would flash an empty wishlist
+    // before the context finishes loading, or show nothing at all if that
+    // separate request failed even though this page's own fetch succeeded.
+    const seenHearted = useRef(new Set());
+    fetchedItems.forEach((p) => { if (isInWishlist(p._id)) seenHearted.current.add(p._id); });
+    const wishlistItems = fetchedItems.filter(
+        (p) => !(seenHearted.current.has(p._id) && !isInWishlist(p._id))
+    );
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 

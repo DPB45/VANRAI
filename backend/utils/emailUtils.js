@@ -11,7 +11,17 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER, // This will be your Brevo Login ID
     pass: process.env.EMAIL_PASS, // This will be your Brevo API Key
   },
+  // Without these, an unreachable SMTP server can hold the request that
+  // awaits sendEmail (register, order, 2FA...) open for minutes. Fail fast so
+  // those requests get a clean "email failed" result instead of hanging.
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
 });
+
+if (!process.env.SENDER_EMAIL) {
+  console.warn('⚠️  SENDER_EMAIL is not set; falling back to the legacy hardcoded sender. Set SENDER_EMAIL to an address verified in Brevo.');
+}
 
 const sendEmail = async ({ to, subject, text, html }) => {
   // IMPORTANT: This email MUST be the one you verified in Brevo.

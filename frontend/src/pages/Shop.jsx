@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FiltersSidebar from '../components/FiltersSidebar';
@@ -197,22 +197,46 @@ const Shop = () => {
     fetchProducts();
   }, [keyword, pageNumber, currentFilters]);
 
-  // Handler to update filters state from sidebar. Also resets pagination
-  // back to page 1, since the previous page number may no longer make sense
-  // once the result set changes.
-  //
-  // IMPORTANT: this is memoized with useCallback, keyed only on the
-  // primitive `keyword`/`pageNumber` values (which only change when the URL
-  // actually changes). FiltersSidebar re-runs its own sync effect whenever
-  // this function's identity changes, so if it were re-created on every
-  // render (e.g. every time loading/products state updates) it would
-  // trigger an infinite fetch loop.
+  // Latest values, kept in refs so handleFilterChange below can have a STABLE
+  // identity. FiltersSidebar re-runs its "push filters up" effect whenever the
+  // handler it receives changes identity. The old version depended on
+  // `pageNumber`, so clicking "page 2" re-created the handler, re-fired the
+  // sidebar effect, and the handler then navigated straight back to page 1 —
+  // pagination could never leave page 1 once a catalog had more than 8 products.
+  const filtersRef = useRef(currentFilters);
+  const pageRef = useRef(pageNumber);
+  const keywordRef = useRef(keyword);
+  const categoryParamRef = useRef(categoryQueryParam);
+  const sortByParamRef = useRef(sortByQueryParam);
+  useEffect(() => { filtersRef.current = currentFilters; }, [currentFilters]);
+  useEffect(() => {
+    pageRef.current = pageNumber;
+    keywordRef.current = keyword;
+    categoryParamRef.current = categoryQueryParam;
+    sortByParamRef.current = sortByQueryParam;
+  }, [pageNumber, keyword, categoryQueryParam, sortByQueryParam]);
+
+  // Handler for filter changes coming from the sidebar. It ignores calls that
+  // don't actually change anything (the sidebar reports its initial state on
+  // mount and whenever it re-syncs), and only resets pagination to page 1 when
+  // a filter genuinely changed, since the old page number may no longer make
+  // sense for the new result set.
   const handleFilterChange = useCallback((newFilters) => {
-    setCurrentFilters((prev) => ({ ...prev, ...newFilters }));
-    if (pageNumber !== 1) {
-      navigate(`/shop?keyword=${encodeURIComponent(keyword)}&pageNumber=1`);
+    const merged = { ...filtersRef.current, ...newFilters };
+    if (JSON.stringify(merged) === JSON.stringify(filtersRef.current)) return;
+
+    filtersRef.current = merged;
+    setCurrentFilters(merged);
+
+    if (pageRef.current !== 1) {
+      const params = new URLSearchParams();
+      params.set('keyword', keywordRef.current);
+      params.set('pageNumber', 1);
+      if (categoryParamRef.current) params.set('category', categoryParamRef.current);
+      if (sortByParamRef.current) params.set('sortBy', sortByParamRef.current);
+      navigate(`/shop?${params.toString()}`);
     }
-  }, [keyword, pageNumber, navigate]);
+  }, [navigate]);
 
   return (
     <div className="container mx-auto px-4 py-8">

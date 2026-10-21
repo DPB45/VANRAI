@@ -35,8 +35,15 @@ axios.interceptors.response.use(
     const isLoginCall = /\/users\/(login|register)/.test(url);
     if (status === 401 && hadToken && !isLoginCall) {
       localStorage.removeItem('userInfo');
-      if (window.location.pathname !== '/login') {
+      const path = window.location.pathname;
+      const needsLogin = /^\/(account|admin|checkout|order|wishlist)/.test(path);
+      if (needsLogin) {
         window.location.assign('/login');
+      } else if (path !== '/login') {
+        // Public page (e.g. a stale token tripped the background wishlist
+        // fetch): quietly drop the dead session instead of throwing the
+        // visitor to the login screen.
+        window.location.reload();
       }
     }
     return Promise.reject(error);

@@ -3,7 +3,23 @@ import jwt from 'jsonwebtoken';
 import asyncHandler from 'express-async-handler';
 import validator from 'validator';
 import crypto from 'crypto';
+import mongoose from 'mongoose';
+import Product from '../models/productModel.js';
 import sendEmail from '../utils/emailUtils.js';
+
+const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Accounts created before emails were lowercased are stored exactly as the
+// user typed them (e.g. "Dhairya@Gmail.com"). An exact lowercase lookup would
+// never match those, locking them out, so fall back to a case-insensitive
+// match. This also stops "A@x.com" registering next to an existing "a@x.com".
+const findUserByEmail = async (rawEmail) => {
+  const normalized = String(rawEmail || '').toLowerCase().trim();
+  if (!normalized) return null;
+  const exact = await User.findOne({ email: normalized });
+  if (exact) return exact;
+  return User.findOne({ email: new RegExp(`^${escapeRegExp(normalized)}$`, 'i') });
+};
 
 // Helper to generate JWT
 const generateToken = (id) => {
@@ -39,7 +55,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // filters, so this lookup must lowercase explicitly or "A@x.com" would
   // slip past a check for an existing "a@x.com".
   const normalizedEmail = email.toLowerCase().trim();
-  const userExists = await User.findOne({ email: normalizedEmail });
+  const userExists = await findUserByEmail(normalizedEmail);
   if (userExists) {
     res.status(400);
     throw new Error('User already exists with this email.');
@@ -80,16 +96,17 @@ const authUser = asyncHandler(async (req, res) => {
       throw new Error('Please enter a valid email and password.');
   }
 
-  const user = await User.findOne({ email: email.toLowerCase().trim() });
+  const user = await findUserByEmail(email);
 
   if (user && (await user.matchPassword(password))) {
 
     // 2FA CHECK
     if (user.isTwoFactorEnabled) {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = crypto.randomInt(100000, 1000000).toString();
 
       user.twoFactorCode = code;
       user.twoFactorCodeExpire = Date.now() + 10 * 60 * 1000; // 10 mins
+      user.twoFactorAttempts = 0;
       await user.save();
 
       const emailSent = await sendEmail({
@@ -134,14 +151,25 @@ const authUser = asyncHandler(async (req, res) => {
 // @desc    Verify 2FA Code (Login Step 2)
 // @route   POST /api/users/login/verify2fa
 // @access  Public
+const MAX_2FA_ATTEMPTS = 5;
+
+const codesMatch = (stored, supplied) => {
+  const a = Buffer.from(String(stored || ''));
+  const b = Buffer.from(String(supplied || ''));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
+
 const verifyTwoFactorLogin = asyncHandler(async (req, res) => {
   const { userId, code } = req.body;
-  const user = await User.findById(userId);
+  const user = mongoose.isValidObjectId(userId) ? await User.findById(userId) : null;
 
-  if (user && user.twoFactorCode === code && user.twoFactorCodeExpire > Date.now()) {
+  const codeActive = user && user.twoFactorCode && user.twoFactorCodeExpire > Date.now();
+
+  if (codeActive && codesMatch(user.twoFactorCode, code)) {
     // Success! Clear code
     user.twoFactorCode = undefined;
     user.twoFactorCodeExpire = undefined;
+    user.twoFactorAttempts = 0;
     await user.save();
 
     res.json({
@@ -152,10 +180,26 @@ const verifyTwoFactorLogin = asyncHandler(async (req, res) => {
       isTwoFactorEnabled: user.isTwoFactorEnabled,
       token: generateToken(user._id),
     });
-  } else {
-    res.status(400);
-    throw new Error('Invalid or expired code');
+    return;
   }
+
+  // Wrong guess against a live code: count it, and burn the code after too many
+  // so a 6-digit code can't be ground down across many attempts/IPs.
+  if (codeActive) {
+    user.twoFactorAttempts = (user.twoFactorAttempts || 0) + 1;
+    if (user.twoFactorAttempts >= MAX_2FA_ATTEMPTS) {
+      user.twoFactorCode = undefined;
+      user.twoFactorCodeExpire = undefined;
+      user.twoFactorAttempts = 0;
+      await user.save();
+      res.status(400);
+      throw new Error('Too many incorrect codes. Please log in again to get a new code.');
+    }
+    await user.save();
+  }
+
+  res.status(400);
+  throw new Error('Invalid or expired code');
 });
 
 // --- PROFILE & SETTINGS ---
@@ -169,10 +213,24 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   if (user) {
     user.name = req.body.name || user.name;
 
+    const wantsEmailChange =
+      req.body.email && req.body.email.toLowerCase().trim() !== user.email.toLowerCase();
+
+    // Changing credentials requires proving knowledge of the current password,
+    // so a stolen/left-open session can't be used to take over the account.
+    // (400, not 401: the frontend treats 401 as "session expired" and logs out.)
+    if (req.body.password || wantsEmailChange) {
+      const ok = req.body.currentPassword && (await user.matchPassword(req.body.currentPassword));
+      if (!ok) {
+        res.status(400);
+        throw new Error('Current password is incorrect.');
+      }
+    }
+
     if (req.body.email) {
       const normalizedEmail = req.body.email.toLowerCase().trim();
       if (normalizedEmail !== user.email) {
-        const emailTaken = await User.findOne({ email: normalizedEmail });
+        const emailTaken = await findUserByEmail(normalizedEmail);
         if (emailTaken) {
           res.status(400);
           throw new Error('That email is already in use by another account.');
@@ -228,7 +286,7 @@ const toggleTwoFactor = asyncHandler(async (req, res) => {
 const requestPasswordReset = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
-  const user = await User.findOne({ email: (email || '').toLowerCase().trim() });
+  const user = await findUserByEmail(email);
 
   if (user) {
     // Generate a raw token to email to the user...
@@ -259,15 +317,15 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
     // If the email failed to send, roll back the token so it can't be
     // used later without the user actually receiving the link.
     if (!emailSent) {
+        // Roll the token back, but still answer exactly as we would for an
+        // unknown email — a 500 here would reveal that the account exists.
         user.resetPasswordToken = undefined;
         user.resetPasswordExpire = undefined;
         await user.save({ validateBeforeSave: false });
-
-        res.status(500);
-        throw new Error('Email server error. Please try again later.');
+        console.error(`Password reset email failed to send for user ${user._id}`);
+    } else {
+        console.log(`🔑 Password reset link sent to ${user.email}.`);
     }
-
-    console.log(`🔑 Password reset link sent to ${user.email}.`);
   }
 
   // Always return the same generic message, whether or not the user
@@ -327,9 +385,15 @@ const toggleWishlist = asyncHandler(async (req, res) => {
   const { productId } = req.body;
   const user = req.user;
 
-  if (!productId) {
+  if (!productId || !mongoose.isValidObjectId(productId)) {
     res.status(400);
-    throw new Error('Product ID is required.');
+    throw new Error('A valid product ID is required.');
+  }
+
+  const productExists = await Product.exists({ _id: productId });
+  if (!productExists) {
+    res.status(404);
+    throw new Error('Product not found.');
   }
 
   const index = user.wishlist.findIndex(

@@ -8,13 +8,27 @@ const router = express.Router();
 // endpoints that are realistic brute-force targets: a login password guess,
 // a 6-digit 2FA code (1,000,000 possibilities), or spamming password-reset
 // emails at someone. This caps those specifically, much tighter.
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: 'Too many attempts. Please wait a few minutes and try again.',
-});
+// Separate limiters per endpoint so they don't share one counter (a normal 2FA
+// login is 2 requests, and a shared 10/15min bucket made password-reset
+// requests eat into login attempts). Messages are JSON objects because the
+// frontend reads `error.response.data.message` — a bare string reply used to
+// show up as a generic "Authentication failed."
+const buildLimiter = (max, message, skipSuccessfulRequests = false) =>
+    rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max,
+        standardHeaders: true,
+        legacyHeaders: false,
+        skipSuccessfulRequests, // only failed attempts count toward the cap
+        message: { message },
+    });
+
+// Password guesses: only FAILED logins count, so normal users are never locked out.
+const loginLimiter = buildLimiter(10, 'Too many login attempts. Please wait 15 minutes and try again.', true);
+// 6-digit 2FA code: only wrong codes count.
+const twoFactorLimiter = buildLimiter(10, 'Too many incorrect codes. Please wait 15 minutes and try again.', true);
+// Reset emails: every request sends mail (and always "succeeds"), so count them all.
+const resetLimiter = buildLimiter(5, 'Too many reset requests. Please wait 15 minutes and try again.');
 import {
     registerUser,
     authUser,
@@ -62,7 +76,7 @@ router.post(
 // 2. Login User (Step 1)
 router.post(
     '/login',
-    authLimiter,
+    loginLimiter,
     [
         check('email', 'Invalid email format').isEmail(),
         check('password', 'Password is required').notEmpty(),
@@ -72,12 +86,12 @@ router.post(
 );
 
 // 3. Verify 2FA Code (Step 2 of Login)
-router.post('/login/verify2fa', authLimiter, verifyTwoFactorLogin); // <-- NEW ROUTE
+router.post('/login/verify2fa', twoFactorLimiter, verifyTwoFactorLogin); // <-- NEW ROUTE
 
 // 4. Forgot Password Request
 router.post(
     '/forgotpassword',
-    authLimiter,
+    resetLimiter,
     [check('email', 'Invalid email format').isEmail()],
     validate,
     requestPasswordReset

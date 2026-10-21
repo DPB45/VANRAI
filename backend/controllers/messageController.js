@@ -37,7 +37,11 @@ const createMessage = asyncHandler(async (req, res) => {
   // Store exactly what the visitor typed — no mangling. React escapes it
   // automatically wherever it's rendered in the admin UI, so there's no
   // injection risk from storing it verbatim, and nothing gets eaten.
-  const siteOwnerEmail = process.env.EMAIL_USER; // Send to the configured Gmail address
+  // Notifications go to a dedicated inbox. EMAIL_USER is the Brevo SMTP login
+  // ID (an account identifier, not necessarily a mailbox anyone reads), so it
+  // must NOT double as the recipient. Falls back to SENDER_EMAIL, which is a
+  // real, verified address.
+  const siteOwnerEmail = process.env.OWNER_EMAIL || process.env.SENDER_EMAIL;
 
   const newMessage = await Message.create({
     name,
@@ -56,7 +60,7 @@ const createMessage = asyncHandler(async (req, res) => {
     // missed. sendEmail() already returns false on failure (see
     // requestPasswordReset for the same pattern) instead of throwing, so we
     // just check it and log clearly rather than assuming success.
-    const emailSent = await sendEmail({
+    const emailSent = !siteOwnerEmail ? false : await sendEmail({
         to: siteOwnerEmail, // Send to site owner
         subject: `[New Contact] ${subject} from ${name}`,
         text: `New message from ${name} (${email}). Subject: ${subject}. Phone: ${phone || 'N/A'}. Message: ${message}`,

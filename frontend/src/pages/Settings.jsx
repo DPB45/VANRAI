@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useUser } from '../context/UserContext';
 
 const Settings = () => {
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -42,12 +43,13 @@ const Settings = () => {
       // Send PUT request to update profile (only sending password)
       const { data } = await axios.put(
         '/api/users/profile',
-        { password }, // Only send the new password
+        { password, currentPassword }, // New password + proof of the current one
         config
       );
 
       setMessage('Password updated successfully!');
       login(data); // Update user info in context/local storage
+      setCurrentPassword('');
       setPassword('');
       setConfirmPassword('');
     } catch (error) {
@@ -73,6 +75,17 @@ const Settings = () => {
         {/* Change Password Form */}
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-700">Change Password</h2>
+
+          <div>
+            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <input
+              type="password" id="currentPassword" value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Enter your current password"
+              required
+            />
+          </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">New Password</label>

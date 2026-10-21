@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import OrderPlacedModal from '../components/OrderPlacedModal';
 // 1. Import TrashIcon
 import { TrashIcon } from '@heroicons/react/24/outline';
@@ -29,7 +29,7 @@ const FormInput = ({ label, id, name, value, onChange, error, isOptional = false
 
 const Checkout = () => {
     // 2. Get removeFromCart from context
-    const { cartItems, subtotal, shipping, total, clearCart, removeFromCart } = useCart();
+    const { cartItems, subtotal, shipping, total, clearCart, removeFromCart, refreshCart } = useCart();
     const { userInfo } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -63,6 +63,11 @@ const Checkout = () => {
     useEffect(() => {
         try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(shippingAddress)); } catch { /* ignore */ }
     }, [shippingAddress]);
+
+    // Re-sync prices/stock with the server before the shopper commits to a total.
+    useEffect(() => {
+        refreshCart();
+    }, [refreshCart]);
 
     // Redirect if cart becomes empty while on this page
     useEffect(() => {
@@ -249,12 +254,26 @@ const Checkout = () => {
                                     </div>
                                 </div>
 
+                                {/* Guests used to get a permanently greyed-out button with no
+                                    explanation (and the redirect-to-login code in handleSubmit
+                                    could never run). Now they're told why and can log in, then
+                                    land back here with their typed address preserved. */}
+                                {!userInfo && (
+                                    <p className="mt-6 text-sm text-gray-700 bg-amber-50 border border-amber-200 rounded-md p-3">
+                                        Please{' '}
+                                        <Link to="/login" state={{ from: '/checkout' }} className="font-semibold text-red-600 hover:underline">
+                                            log in
+                                        </Link>{' '}
+                                        to place your order. Your details below will be kept.
+                                    </p>
+                                )}
+
                                 <button
                                     type="submit"
-                                    disabled={loading || cartItems.length === 0 || !userInfo}
-                                    className={`w-full mt-8 bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors ${ (loading || cartItems.length === 0 || !userInfo) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={loading || cartItems.length === 0}
+                                    className={`w-full mt-4 bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors ${ (loading || cartItems.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    {loading ? 'Placing Order...' : 'Place Order'}
+                                    {loading ? 'Placing Order...' : userInfo ? 'Place Order' : 'Log in to Place Order'}
                                 </button>
                             </div>
                         </div>

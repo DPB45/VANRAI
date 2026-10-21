@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import axios from 'axios';
 
 // 1. Create the Context
 const CartContext = createContext();
@@ -83,6 +84,38 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
   };
 
+  // Re-sync every cart line with the live product (price, name, image, stock).
+  // Prices are snapshotted when an item is added, but the server always bills
+  // the CURRENT price, so without this the shopper can see one total and be
+  // charged another. Products that no longer exist are dropped.
+  const refreshCart = useCallback(async () => {
+    const snapshot = JSON.parse(localStorage.getItem('vanraiCart') || '[]');
+    if (snapshot.length === 0) return;
+
+    const results = await Promise.all(
+      snapshot.map(async (item) => {
+        try {
+          const { data } = await axios.get(`/api/products/${item._id}`);
+          return { item, product: data, gone: false };
+        } catch (err) {
+          const gone = err.response?.status === 404;
+          return { item, product: null, gone };
+        }
+      })
+    );
+
+    setCartItems((prev) =>
+      prev
+        .map((line) => {
+          const match = results.find((r) => r.item._id === line._id);
+          if (!match || !match.product) return match?.gone ? null : line;
+          const { name, price, imageUrl, category, weight, inStock } = match.product;
+          return { ...line, name, price, imageUrl, category, weight, inStock };
+        })
+        .filter(Boolean)
+    );
+  }, []);
+
   // --- Calculations ---
 
   const subtotal = cartItems.reduce(
@@ -101,6 +134,7 @@ export const CartProvider = ({ children }) => {
     removeFromCart,
     updateQuantity,
     clearCart, // <-- Export the new function
+    refreshCart,
     subtotal,
     shipping,
     total,

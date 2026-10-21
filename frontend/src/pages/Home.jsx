@@ -31,7 +31,9 @@ const Home = () => {
         const { data } = await axios.get('/api/products');
 
         // Correctly extracting the array from the paged response
-        setProducts(data.products);
+        // If the API URL is misconfigured the response can be HTML or lack
+        // `products`; never let that crash the page on products.slice().
+        setProducts(Array.isArray(data?.products) ? data.products : []);
 
       } catch (err) {
         setError('Failed to load products.');
