@@ -116,12 +116,27 @@ const Cart = () => {
             </div>
 
             <div className="mt-8 space-y-4">
-              <Link
-                to="/checkout"
-                className="w-full block text-center bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors"
-              >
-                Checkout
-              </Link>
+              {cartItems.some((item) => item.inStock === false) ? (
+                <>
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full block text-center bg-red-600 text-white font-semibold py-3 px-8 rounded-md opacity-50 cursor-not-allowed"
+                  >
+                    Checkout
+                  </button>
+                  <p className="text-sm text-red-600 text-center">
+                    Remove the out-of-stock item(s) above to continue.
+                  </p>
+                </>
+              ) : (
+                <Link
+                  to="/checkout"
+                  className="w-full block text-center bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Checkout
+                </Link>
+              )}
               <Link
                 to="/shop"
                 className="w-full block text-center bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-md hover:bg-gray-50 transition-colors"

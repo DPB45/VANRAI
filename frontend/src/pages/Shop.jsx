@@ -259,7 +259,7 @@ const Shop = () => {
             relative to what's actually being fetched. The sidebar's own
             onFilterChange never writes back to the URL, so this never remounts
             mid-interaction from the user's own clicks. */}
-        <FiltersSidebar key={categoryQueryParam || 'all'} onFilterChange={handleFilterChange} currentFilters={{ ...currentFilters, categories: getFiltersFromQuery(query).categories }} />
+        <FiltersSidebar key={categoryQueryParam || 'all'} onFilterChange={handleFilterChange} currentFilters={getFiltersFromQuery(query)} />
 
         {/* 2. Main Content & Product Grid */}
         <main className="w-full lg:w-3/4">

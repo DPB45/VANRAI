@@ -78,6 +78,10 @@ const Checkout = () => {
         try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(shippingAddress)); } catch { /* ignore */ }
     }, [shippingAddress]);
 
+    // Lines the latest refresh found to be out of stock; the server would
+    // reject the order for these anyway, so stop it here with a clear reason.
+    const unavailableItems = cartItems.filter((item) => item.inStock === false);
+
     // Saved addresses from the account, offered as a one-click prefill.
     const [savedAddresses, setSavedAddresses] = useState([]);
     useEffect(() => {
@@ -148,6 +152,14 @@ const Checkout = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        // Belt and braces for Enter-key submits: never send an order that
+        // contains an out-of-stock line.
+        if (unavailableItems.length > 0) {
+            setError('Please remove the out-of-stock item(s) from your order first.');
+            return;
+        }
+
         setLoading(true);
 
         if (!userInfo) {
@@ -326,10 +338,18 @@ const Checkout = () => {
                                     </p>
                                 )}
 
+                                {unavailableItems.length > 0 && (
+                                    <p className="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
+                                        {unavailableItems.map((item) => item.name).join(', ')}{' '}
+                                        {unavailableItems.length > 1 ? 'are' : 'is'} out of stock. Remove{' '}
+                                        {unavailableItems.length > 1 ? 'them' : 'it'} from your order (trash icon) to continue.
+                                    </p>
+                                )}
+
                                 <button
                                     type="submit"
-                                    disabled={loading || cartItems.length === 0}
-                                    className={`w-full mt-4 bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors ${ (loading || cartItems.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={loading || cartItems.length === 0 || unavailableItems.length > 0}
+                                    className={`w-full mt-4 bg-red-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-red-700 transition-colors ${ (loading || cartItems.length === 0 || unavailableItems.length > 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     {loading ? 'Placing Order...' : userInfo ? 'Place Order' : 'Log in to Place Order'}
                                 </button>

@@ -100,11 +100,18 @@ export const CartProvider = ({ children }) => {
     if (Date.now() - lastRefreshRef.current < 60 * 1000) return;
     lastRefreshRef.current = Date.now();
 
-    let products;
+    let products = [];
     try {
-      const ids = snapshot.map((item) => item._id).join(',');
-      const { data } = await axios.get('/api/products', { params: { ids } });
-      products = data.products;
+      // The server accepts at most 50 ids per request, so go in chunks; a
+      // line missing from the response is then genuinely gone, not just
+      // beyond the limit.
+      for (let i = 0; i < snapshot.length; i += 50) {
+        const ids = snapshot.slice(i, i + 50).map((item) => item._id).join(',');
+        const { data } = await axios.get('/api/products', { params: { ids } });
+        // A wrong VITE_API_URL can return HTML instead of JSON.
+        if (!Array.isArray(data?.products)) throw new Error('Unexpected products response');
+        products = products.concat(data.products);
+      }
     } catch {
       lastRefreshRef.current = 0; // let the next visit retry
       return; // network/rate-limit problem: keep the cart as-is
