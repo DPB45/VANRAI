@@ -251,15 +251,15 @@ const Shop = () => {
       <div className="flex flex-col lg:flex-row">
 
         {/* 1. Filters Sidebar */}
-        {/* key={categoryQueryParam} forces a remount (re-reading currentFilters
-            fresh) whenever the URL's category changes from outside the sidebar
-            itself (e.g. a footer link, or pagination now preserving it per
-            buildPageUrl above) — the sidebar only initializes its checkbox
-            state once internally, so without this it would silently go stale
-            relative to what's actually being fetched. The sidebar's own
-            onFilterChange never writes back to the URL, so this never remounts
-            mid-interaction from the user's own clicks. */}
-        <FiltersSidebar key={categoryQueryParam || 'all'} onFilterChange={handleFilterChange} currentFilters={getFiltersFromQuery(query)} />
+        {/* The key forces a remount (so the sidebar re-reads fresh filters)
+            whenever the URL's category OR sortBy changes from outside the
+            sidebar — e.g. footer links like /shop?category=Masalas or
+            /shop?sortBy=popularity. Both params make the resync effect above
+            reset the real filters, so the sidebar must reset with them or it
+            would keep showing ticks/price limits that are no longer applied.
+            The sidebar and the sort dropdown never write to the URL, so this
+            never remounts mid-interaction from the shopper's own clicks. */}
+        <FiltersSidebar key={`${categoryQueryParam || 'all'}|${sortByQueryParam || ''}`} onFilterChange={handleFilterChange} currentFilters={getFiltersFromQuery(query)} />
 
         {/* 2. Main Content & Product Grid */}
         <main className="w-full lg:w-3/4">
