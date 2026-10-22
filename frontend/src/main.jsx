@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -63,47 +63,66 @@ axios.interceptors.response.use(
   }
 );
 
-// Import Pages
+// --- Pages loaded up-front: the main shopping path ---
 import Home from './pages/Home.jsx';
 import Shop from './pages/Shop.jsx';
 import ProductDetails from './pages/ProductDetails.jsx';
 import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
-import Contact from './pages/Contact.jsx';
-import PrivacyPolicy from './pages/PrivacyPolicy.jsx';
-import TermsOfService from './pages/TermsOfService.jsx';
 import Login from './pages/Login.jsx';
-import AboutUs from './pages/AboutUs.jsx';
-import Recipes from './pages/Recipes.jsx';
-import RecipeDetails from './pages/RecipeDetails.jsx';
-import HelpCenter from './pages/HelpCenter.jsx';
-import AccountDashboard from './pages/AccountDashboard.jsx';
-import Profile from './pages/Profile.jsx';
-import Orders from './pages/Orders.jsx';
-import Addresses from './pages/Addresses.jsx';
-import Settings from './pages/Settings.jsx';
-import OrderDetails from './pages/OrderDetails.jsx';
-import ForgotPassword from './pages/ForgotPassword.jsx';
-import ResetPassword from './pages/ResetPassword.jsx';
-import Wishlist from './pages/Wishlist.jsx';
-
-// Admin Imports
 import AdminRoute from './components/AdminRoute.jsx';
-import AdminDashboard from './pages/admin/AdminDashboard.jsx';
-import UserList from './pages/admin/UserList.jsx';
-import OrderList from './pages/admin/OrderList.jsx';
-import ProductList from './pages/admin/ProductList.jsx';
-import ProductEdit from './pages/admin/ProductEdit.jsx';
-import Analytics from './pages/admin/Analytics.jsx';
-import MessageList from './pages/admin/MessageList.jsx';
+
+// --- Pages loaded on demand (code-split into separate files) ---
+// <Suspense> for these lives in App.jsx, around <Outlet />.
+const Contact = lazy(() => import('./pages/Contact.jsx'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy.jsx'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService.jsx'));
+const AboutUs = lazy(() => import('./pages/AboutUs.jsx'));
+const Recipes = lazy(() => import('./pages/Recipes.jsx'));
+const RecipeDetails = lazy(() => import('./pages/RecipeDetails.jsx'));
+const HelpCenter = lazy(() => import('./pages/HelpCenter.jsx'));
+const AccountDashboard = lazy(() => import('./pages/AccountDashboard.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
+const Orders = lazy(() => import('./pages/Orders.jsx'));
+const Addresses = lazy(() => import('./pages/Addresses.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
+const OrderDetails = lazy(() => import('./pages/OrderDetails.jsx'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'));
+const Wishlist = lazy(() => import('./pages/Wishlist.jsx'));
+
+// Admin pages (most visitors never open these)
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
+const UserList = lazy(() => import('./pages/admin/UserList.jsx'));
+const OrderList = lazy(() => import('./pages/admin/OrderList.jsx'));
+const ProductList = lazy(() => import('./pages/admin/ProductList.jsx'));
+const ProductEdit = lazy(() => import('./pages/admin/ProductEdit.jsx'));
+const Analytics = lazy(() => import('./pages/admin/Analytics.jsx'));
+const MessageList = lazy(() => import('./pages/admin/MessageList.jsx'));
 
 import { CartProvider } from './context/CartContext.jsx';
 import { UserProvider } from './context/UserContext.jsx';
+
+// Shown if a page fails to load. The usual cause: a visitor kept the site
+// open across a new deploy, so the old page file names no longer exist.
+// A reload fetches the new version.
+const RouteError = () => (
+  <div style={{ padding: '4rem 1rem', textAlign: 'center' }}>
+    <p>Something went wrong loading this page.</p>
+    <button
+      onClick={() => window.location.reload()}
+      style={{ marginTop: '1rem', padding: '0.5rem 1.25rem', cursor: 'pointer' }}
+    >
+      Reload
+    </button>
+  </div>
+);
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
+    errorElement: <RouteError />,
     children: [
       { path: '/', element: <Home /> },
       { path: '/shop', element: <Shop /> },
